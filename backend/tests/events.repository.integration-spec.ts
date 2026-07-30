@@ -9,7 +9,10 @@ describe('EventsRepository Integration Tests (Phase 2 Database Invariants)', () 
   let eventsRepository: EventsRepository;
   let prisma: PrismaService;
 
-  const testDbUrl = process.env.TEST_DATABASE_URL || 'postgresql://hirushikanth@127.0.0.1:5432/tally_test';
+  const testDbUrl =
+    process.env.DATABASE_URL ||
+    process.env.TEST_DATABASE_URL ||
+    'postgresql://hirushikanth@127.0.0.1:5432/tally_test';
 
   let testUserId: string;
   let testTripId: string;
