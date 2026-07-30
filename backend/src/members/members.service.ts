@@ -14,7 +14,9 @@ export class MembersService {
 
   async addMember(tripId: string, dto: AddMemberDto) {
     // Resolve user by email
-    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
     if (!user) {
       throw new NotFoundException(`No user found with email ${dto.email}`);
     }
@@ -24,12 +26,16 @@ export class MembersService {
       where: { tripId_userId: { tripId, userId: user.id } },
     });
     if (existing && existing.leftAt === null) {
-      throw new ConflictException('User is already an active member of this trip');
+      throw new ConflictException(
+        'User is already an active member of this trip',
+      );
     }
 
     // Prevent adding a user with OWNER role — only one owner is permitted
     if (dto.role === MemberRole.OWNER) {
-      throw new BadRequestException('Cannot assign OWNER role via member invitation');
+      throw new BadRequestException(
+        'Cannot assign OWNER role via member invitation',
+      );
     }
 
     if (existing) {

@@ -70,7 +70,9 @@ export class EventsRepository {
     });
   }
 
-  async findOriginalEventForRefund(id: string): Promise<BusinessEventWithPostings | null> {
+  async findOriginalEventForRefund(
+    id: string,
+  ): Promise<BusinessEventWithPostings | null> {
     return this.prisma.businessEvent.findUnique({
       where: { id },
       include: { postings: true },

@@ -41,8 +41,14 @@ export class AuthService {
       },
     });
 
-    const accessToken = this.jwtService.sign({ sub: user.id, email: user.email });
-    return { accessToken, user: { id: user.id, name: user.name, email: user.email } };
+    const accessToken = this.jwtService.sign({
+      sub: user.id,
+      email: user.email,
+    });
+    return {
+      accessToken,
+      user: { id: user.id, name: user.name, email: user.email },
+    };
   }
 
   async login(dto: LoginDto): Promise<AuthResponse> {
@@ -58,7 +64,13 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const accessToken = this.jwtService.sign({ sub: user.id, email: user.email });
-    return { accessToken, user: { id: user.id, name: user.name, email: user.email } };
+    const accessToken = this.jwtService.sign({
+      sub: user.id,
+      email: user.email,
+    });
+    return {
+      accessToken,
+      user: { id: user.id, name: user.name, email: user.email },
+    };
   }
 }

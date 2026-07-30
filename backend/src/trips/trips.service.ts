@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { MemberRole, TripStatus } from '@prisma/client';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { CreateTripDto } from './trips.dto';

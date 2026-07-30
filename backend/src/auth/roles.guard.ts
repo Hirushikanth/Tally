@@ -26,21 +26,38 @@ export class RolesGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const requiredRole = this.reflector.getAllAndOverride<MemberRole | undefined>(
-      ROLES_KEY,
-      [context.getHandler(), context.getClass()],
-    );
+    const requiredRole = this.reflector.getAllAndOverride<
+      MemberRole | undefined
+    >(ROLES_KEY, [context.getHandler(), context.getClass()]);
 
     // If no @RequireRole() decorator, skip role check
     if (!requiredRole) return true;
 
     const request = context.switchToHttp().getRequest<{
-      user: AuthenticatedUser;
-      params: Record<string, string>;
+      user?: AuthenticatedUser;
+      params?: Record<string, string>;
+      url?: string;
     }>();
 
+    if (!request.user) {
+      throw new ForbiddenException('User context missing');
+    }
+
     const { userId } = request.user;
-    const tripId = request.params.tripId ?? request.params.id;
+    let tripId = request.params?.tripId ?? request.params?.id;
+
+    // Fallback: extract tripId from request URL path (/trips/:tripId/...)
+    if (!tripId && request.url) {
+      const match = request.url.match(/\/trips\/([^/?]+)/);
+      if (
+        match &&
+        match[1] &&
+        match[1] !== 'events' &&
+        match[1] !== 'members'
+      ) {
+        tripId = match[1];
+      }
+    }
 
     if (!tripId) {
       throw new ForbiddenException('Trip context required for this action');

@@ -1,9 +1,13 @@
 {
   "moduleFileExtensions": ["js", "json", "ts"],
   "rootDir": "..",
-  "testMatch": ["<rootDir>/tests/*.integration-spec.ts"],
+  "testMatch": [
+    "<rootDir>/tests/*.integration-spec.ts",
+    "<rootDir>/tests/*.e2e-spec.ts"
+  ],
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   },
-  "testEnvironment": "node"
+  "testEnvironment": "node",
+  "maxWorkers": 1
 }

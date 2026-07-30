@@ -25,10 +25,7 @@ export class MembersController {
   /** POST /trips/:tripId/members — add a member (ADMIN or above) */
   @Post()
   @RequireRole(MemberRole.ADMIN)
-  addMember(
-    @Param('tripId') tripId: string,
-    @Body() dto: AddMemberDto,
-  ) {
+  addMember(@Param('tripId') tripId: string, @Body() dto: AddMemberDto) {
     return this.membersService.addMember(tripId, dto);
   }
 
