@@ -1,0 +1,9 @@
+{
+  "name": "@tally/frontend",
+  "private": true,
+  "version": "0.0.1",
+  "scripts": {
+    "lint": "echo \"frontend: no lint yet (Phase 6)\"",
+    "test": "echo \"frontend: no tests yet (Phase 6)\""
+  }
+}

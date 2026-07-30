@@ -1,0 +1,141 @@
+// ============================================================
+// Tally — Prisma Schema
+// Model: "Positions only" — no expense/category accounts.
+// Sign convention: positive balance = should RECEIVE money
+//                  negative balance = OWES money
+// Invariant: for every BusinessEvent, SUM(Posting.amount) == 0
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ------------------------------------------------------------
+// Users & Trips
+// ------------------------------------------------------------
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  createdAt DateTime @default(now())
+
+  memberships   Member[]
+  createdTrips  Trip[]          @relation("TripCreator")
+  createdEvents BusinessEvent[] @relation("EventCreator")
+}
+
+model Trip {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  currency    String     @default("LKR")
+  status      TripStatus @default(ACTIVE)
+  createdAt   DateTime   @default(now())
+
+  createdById String
+  createdBy   User   @relation("TripCreator", fields: [createdById], references: [id])
+
+  members        Member[]
+  businessEvents BusinessEvent[]
+}
+
+enum TripStatus {
+  ACTIVE
+  ARCHIVED
+  SETTLED
+}
+
+model Member {
+  id       String    @id @default(cuid())
+  tripId   String
+  trip     Trip      @relation(fields: [tripId], references: [id])
+  userId   String
+  user     User      @relation(fields: [userId], references: [id])
+  joinedAt DateTime  @default(now())
+  leftAt   DateTime?
+
+  postings        Posting[]
+  balanceSnapshot BalanceSnapshot?
+
+  @@unique([tripId, userId])
+}
+
+// ------------------------------------------------------------
+// Business Events (human-facing "what happened")
+// ------------------------------------------------------------
+
+enum BusinessEventType {
+  SHARED_EXPENSE
+  LOAN
+  REPAYMENT
+  SETTLEMENT
+  REFUND
+  ADJUSTMENT
+}
+
+model BusinessEvent {
+  id       String            @id @default(cuid())
+  tripId   String
+  trip     Trip              @relation(fields: [tripId], references: [id])
+  type     BusinessEventType
+  notes    String?
+  category String?
+  amount   Int
+
+  createdById String
+  createdBy   User     @relation("EventCreator", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+
+  refundOfId String?
+  refundOf   BusinessEvent?  @relation("EventRefunds", fields: [refundOfId], references: [id])
+  refunds    BusinessEvent[] @relation("EventRefunds")
+
+  attachments Attachment[]
+  postings    Posting[]
+
+  @@index([tripId, type])
+}
+
+model Attachment {
+  id              String        @id @default(cuid())
+  businessEventId String
+  businessEvent   BusinessEvent @relation(fields: [businessEventId], references: [id])
+  url             String
+  fileType        String
+  uploadedAt      DateTime      @default(now())
+}
+
+// ------------------------------------------------------------
+// Postings — the single unified journal (accounting-facing)
+// ------------------------------------------------------------
+
+model Posting {
+  id              String        @id @default(cuid())
+  businessEventId String
+  businessEvent   BusinessEvent @relation(fields: [businessEventId], references: [id])
+  memberId        String
+  member          Member        @relation(fields: [memberId], references: [id])
+
+  amount    Int
+  createdAt DateTime @default(now())
+
+  @@index([memberId])
+  @@index([businessEventId])
+}
+
+// ------------------------------------------------------------
+// Balance — materialized cache ONLY. Always rebuildable from Postings.
+// ------------------------------------------------------------
+
+model BalanceSnapshot {
+  memberId   String   @id
+  member     Member   @relation(fields: [memberId], references: [id])
+  balance    Int
+  computedAt DateTime @default(now())
+}
