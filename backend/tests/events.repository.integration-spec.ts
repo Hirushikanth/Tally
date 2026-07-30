@@ -9,7 +9,7 @@ describe('EventsRepository Integration Tests (Phase 2 Database Invariants)', () 
   let eventsRepository: EventsRepository;
   let prisma: PrismaService;
 
-  const testDbUrl =
+  const getTestDbUrl = () =>
     process.env.DATABASE_URL ||
     process.env.TEST_DATABASE_URL ||
     'postgresql://hirushikanth@127.0.0.1:5432/tally_test';
@@ -20,7 +20,7 @@ describe('EventsRepository Integration Tests (Phase 2 Database Invariants)', () 
   let member2Id: string;
 
   beforeAll(async () => {
-    process.env.DATABASE_URL = testDbUrl;
+    process.env.DATABASE_URL = getTestDbUrl();
 
     testingModule = await Test.createTestingModule({
       imports: [PrismaModule],

@@ -14,7 +14,7 @@ describe('Phase 4 — Business Event APIs E2E', () => {
   let app: INestApplication;
   let prisma: PrismaService;
 
-  const testDbUrl =
+  const getTestDbUrl = () =>
     process.env.DATABASE_URL ||
     process.env.TEST_DATABASE_URL ||
     'postgresql://hirushikanth@127.0.0.1:5432/tally_test';
@@ -31,7 +31,7 @@ describe('Phase 4 — Business Event APIs E2E', () => {
   let nimalMemberId: string;
 
   beforeAll(async () => {
-    process.env.DATABASE_URL = testDbUrl;
+    process.env.DATABASE_URL = getTestDbUrl();
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
