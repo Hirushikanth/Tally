@@ -40,6 +40,8 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - run: pnpm --filter backend exec prisma generate
+
       - run: pnpm --filter backend exec prisma migrate deploy
 
       - run: pnpm lint
