@@ -1,0 +1,12 @@
+.app-shell {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr;
+  min-height: 100vh;
+}
+
+.app-main {
+  overflow-y: auto;
+  min-height: 100vh;
+}

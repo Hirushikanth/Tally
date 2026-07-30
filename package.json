@@ -3,6 +3,8 @@
   "private": true,
   "scripts": {
     "dev:backend": "pnpm --filter backend start:dev",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "dev": "pnpm --parallel dev",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test"
   },

@@ -1,0 +1,126 @@
+import { useState } from 'react';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { authApi } from '@/api/auth';
+import { useAuthStore } from '@/store/auth.store';
+import { Button } from '@/components/common/Button';
+import { Stars } from '@/components/Stars';
+import './AuthPages.css';
+
+const loginSchema = z.object({
+  email: z.string().email('Enter a valid email'),
+  password: z.string().min(1, 'Password is required'),
+});
+
+type LoginForm = z.infer<typeof loginSchema>;
+
+export function LoginPage() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const login = useAuthStore((s) => s.login);
+  const navigate = useNavigate();
+  const [serverError, setServerError] = useState('');
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginForm>({ resolver: zodResolver(loginSchema) });
+
+  if (isAuthenticated) {
+    return <Navigate to="/trips" replace />;
+  }
+
+  const onSubmit = async (data: LoginForm) => {
+    setServerError('');
+    try {
+      const response = await authApi.login(data);
+      login(response);
+      navigate('/trips');
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })
+        ?.response?.data?.message;
+      setServerError(msg ?? 'Invalid email or password');
+    }
+  };
+
+  return (
+    <>
+      <Stars />
+      <div className="auth-page">
+        <div className="auth-card glass">
+          {/* Brand */}
+          <div className="auth-brand">
+            <div className="auth-brand-mark">T</div>
+            <div className="auth-brand-name">
+              Tally<span>.</span>
+            </div>
+          </div>
+
+          <div className="auth-header">
+            <h1 className="auth-title">Welcome back</h1>
+            <p className="auth-subtitle">Sign in to your account to continue</p>
+          </div>
+
+          <form className="auth-form" onSubmit={handleSubmit(onSubmit)} noValidate>
+            <div className="form-group">
+              <label className="form-label" htmlFor="login-email">
+                Email
+              </label>
+              <input
+                id="login-email"
+                type="email"
+                className={`form-input ${errors.email ? 'error' : ''}`}
+                placeholder="you@example.com"
+                autoComplete="email"
+                {...register('email')}
+              />
+              {errors.email && (
+                <span className="form-error">{errors.email.message}</span>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" htmlFor="login-password">
+                Password
+              </label>
+              <input
+                id="login-password"
+                type="password"
+                className={`form-input ${errors.password ? 'error' : ''}`}
+                placeholder="••••••••"
+                autoComplete="current-password"
+                {...register('password')}
+              />
+              {errors.password && (
+                <span className="form-error">{errors.password.message}</span>
+              )}
+            </div>
+
+            {serverError && (
+              <div className="auth-server-error">{serverError}</div>
+            )}
+
+            <Button
+              type="submit"
+              variant="primary"
+              fullWidth
+              loading={isSubmitting}
+              size="lg"
+            >
+              Sign in
+            </Button>
+          </form>
+
+          <p className="auth-switch">
+            New to Tally?{' '}
+            <Link to="/register" className="auth-link">
+              Create an account
+            </Link>
+          </p>
+        </div>
+      </div>
+    </>
+  );
+}

@@ -1,0 +1,158 @@
+.balances-page {
+  padding: 30px 40px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.balances-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.balances-title {
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.balances-sub {
+  font-size: 13.5px;
+  color: var(--text-mid);
+  margin-top: 5px;
+}
+
+.balances-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.balances-panel {
+  padding: 24px;
+}
+
+.positions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.position-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+}
+
+.position-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.position-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-hi);
+}
+
+.you-tag {
+  font-size: 11px;
+  color: var(--gold-soft);
+  font-weight: 400;
+  margin-left: 4px;
+}
+
+.position-role {
+  font-size: 11.5px;
+  color: var(--text-low);
+}
+
+.position-amount {
+  text-align: right;
+}
+
+.position-status {
+  font-size: 11.5px;
+  color: var(--text-low);
+  margin-bottom: 2px;
+}
+
+/* Suggestions */
+.suggestions-explanation {
+  font-size: 13px;
+  color: var(--text-mid);
+  margin-bottom: 18px;
+  line-height: 1.4;
+}
+
+.suggestions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.suggestion-card {
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: flex-end;
+}
+
+.suggestion-flow {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.suggestion-person {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.suggestion-arrow {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  padding: 0 12px;
+}
+
+.suggestion-arrow-line {
+  width: 100%;
+  height: 1px;
+  background: var(--gold-dim);
+  border-top: 1px dashed var(--gold-soft);
+}
+
+.suggestion-amount {
+  font-size: 13px;
+  background: #0f1120;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border-glass);
+  margin-bottom: 4px;
+}
+
+.suggestion-arrow-head {
+  position: absolute;
+  right: 6px;
+  top: 10px;
+  font-size: 12px;
+  color: var(--gold-soft);
+}
