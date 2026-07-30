@@ -20,15 +20,17 @@ datasource db {
 // ------------------------------------------------------------
 
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  createdAt DateTime @default(now())
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
 
   memberships   Member[]
   createdTrips  Trip[]          @relation("TripCreator")
   createdEvents BusinessEvent[] @relation("EventCreator")
 }
+
 
 model Trip {
   id          String     @id @default(cuid())
@@ -51,13 +53,21 @@ enum TripStatus {
   SETTLED
 }
 
+enum MemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
 model Member {
-  id       String    @id @default(cuid())
+  id       String     @id @default(cuid())
   tripId   String
-  trip     Trip      @relation(fields: [tripId], references: [id])
+  trip     Trip       @relation(fields: [tripId], references: [id])
   userId   String
-  user     User      @relation(fields: [userId], references: [id])
-  joinedAt DateTime  @default(now())
+  user     User       @relation(fields: [userId], references: [id])
+  role     MemberRole @default(MEMBER)
+  joinedAt DateTime   @default(now())
   leftAt   DateTime?
 
   postings        Posting[]

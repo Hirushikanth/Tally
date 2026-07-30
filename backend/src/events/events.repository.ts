@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { BusinessEvent, BusinessEventType, Posting } from '@prisma/client';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { validateZeroSum } from '../posting-engine/validate-zero-sum';
-import { PostingInput } from '../posting-engine/posting-engine.types';
+import { PostingDraft } from '../posting-engine/posting-engine.types';
 
 export interface SaveEventParams {
   tripId: string;
@@ -14,7 +14,7 @@ export interface SaveEventParams {
     category?: string;
     refundOfId?: string;
   };
-  postings: PostingInput[];
+  postings: PostingDraft[];
 }
 
 export type BusinessEventWithPostings = BusinessEvent & {

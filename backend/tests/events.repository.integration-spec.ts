@@ -40,7 +40,7 @@ describe('EventsRepository Integration Tests (Phase 2 Database Invariants)', () 
 
     // Seed test user, trip, and members
     const user = await prisma.user.create({
-      data: { name: 'Test User', email: `test-${Date.now()}@example.com` },
+      data: { name: 'Test User', email: `test-${Date.now()}@example.com`, passwordHash: 'testhash' },
     });
     testUserId = user.id;
 
@@ -55,7 +55,7 @@ describe('EventsRepository Integration Tests (Phase 2 Database Invariants)', () 
     member1Id = m1.id;
 
     const u2 = await prisma.user.create({
-      data: { name: 'User 2', email: `test2-${Date.now()}@example.com` },
+      data: { name: 'User 2', email: `test2-${Date.now()}@example.com`, passwordHash: 'testhash' },
     });
     const m2 = await prisma.member.create({
       data: { tripId: testTripId, userId: u2.id },
