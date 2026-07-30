@@ -6,9 +6,19 @@ import { EventsModule } from './events/events.module';
 import { AuthModule } from './auth/auth.module';
 import { TripsModule } from './trips/trips.module';
 import { MembersModule } from './members/members.module';
+import { LedgerModule } from './ledger/ledger.module';
+import { SettlementsModule } from './settlements/settlements.module';
 
 @Module({
-  imports: [PrismaModule, EventsModule, AuthModule, TripsModule, MembersModule],
+  imports: [
+    PrismaModule,
+    EventsModule,
+    AuthModule,
+    TripsModule,
+    MembersModule,
+    LedgerModule,
+    SettlementsModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

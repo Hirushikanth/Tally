@@ -1,7 +1,10 @@
 {
   "moduleFileExtensions": ["js", "json", "ts"],
   "rootDir": "..",
-  "testMatch": ["<rootDir>/tests/posting-engine.spec.ts"],
+  "testMatch": [
+    "<rootDir>/tests/posting-engine.spec.ts",
+    "<rootDir>/tests/ledger-settlements.spec.ts"
+  ],
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   },
