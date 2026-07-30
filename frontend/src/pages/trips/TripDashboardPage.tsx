@@ -2,7 +2,6 @@ import { useParams, Navigate } from 'react-router-dom';
 import { useTrip } from '@/hooks/useTrips';
 import { useEvents } from '@/hooks/useEvents';
 import { useBalances } from '@/hooks/useLedger';
-import { useSuggestions } from '@/hooks/useSettlements';
 import { useAuthStore } from '@/store/auth.store';
 import { useUIStore } from '@/store/ui.store';
 import { Button } from '@/components/common/Button';

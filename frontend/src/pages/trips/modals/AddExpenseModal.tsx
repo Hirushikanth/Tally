@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useCreateSharedExpense } from '@/hooks/useEvents';
@@ -37,7 +37,6 @@ export function AddExpenseModal({ tripId, members, currency, currentMemberId, on
   const {
     register,
     handleSubmit,
-    control,
     watch,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
@@ -48,7 +47,6 @@ export function AddExpenseModal({ tripId, members, currency, currentMemberId, on
     },
   });
 
-  const splitMethod = watch('splitMethod');
   const amountValue = watch('amount');
 
   const toggleParticipant = (memberId: string) => {

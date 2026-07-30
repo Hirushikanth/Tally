@@ -30,8 +30,11 @@ export class SettlementSuggestionService {
   computeSuggestedSettlements(
     balances: MemberBalanceDto[],
   ): SuggestedSettlement[] {
-    const debtors: { memberId: string; userName: string; amountOwed: number }[] =
-      [];
+    const debtors: {
+      memberId: string;
+      userName: string;
+      amountOwed: number;
+    }[] = [];
     const creditors: {
       memberId: string;
       userName: string;

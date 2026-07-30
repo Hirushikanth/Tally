@@ -3,7 +3,6 @@ import { useTrips } from '@/hooks/useTrips';
 import { useAuthStore } from '@/store/auth.store';
 import { useUIStore } from '@/store/ui.store';
 import { Avatar } from '@/components/common/Avatar';
-import { formatAmount } from '@/lib/utils';
 import './Sidebar.css';
 
 const NAV_ITEMS = [
