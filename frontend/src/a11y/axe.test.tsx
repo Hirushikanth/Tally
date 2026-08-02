@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import axe from 'axe-core';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { TripsListPage } from '@/pages/trips/TripsListPage';
