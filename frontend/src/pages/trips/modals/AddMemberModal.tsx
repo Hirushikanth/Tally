@@ -48,11 +48,7 @@ export function AddMemberModal({ open, tripId, onClose }: Props) {
   };
 
   return (
-    <Modal open={open} onClose={onClose} panelStyle={{ maxWidth: 400 }}>
-      <div className="modal-header">
-        <h2 className="modal-title">Add member</h2>
-        <button className="modal-close" onClick={onClose}>✕</button>
-      </div>
+    <Modal open={open} onClose={onClose} title="Add member" panelStyle={{ maxWidth: 400 }}>
       <form className="modal-form" onSubmit={handleSubmit(onSubmit)} noValidate>
           <div className="form-group">
             <label className="form-label" htmlFor="member-email">

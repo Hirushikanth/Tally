@@ -8,6 +8,7 @@ import { useAuthStore } from '@/store/auth.store';
 import { Button } from '@/components/common/Button';
 import { Stars } from '@/components/Stars';
 import { getApiErrorMessage } from '@/api/errors';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import './AuthPages.css';
 
 const loginSchema = z.object({
@@ -18,6 +19,7 @@ const loginSchema = z.object({
 type LoginForm = z.infer<typeof loginSchema>;
 
 export function LoginPage() {
+  useDocumentTitle('Sign in');
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const login = useAuthStore((s) => s.login);
   const navigate = useNavigate();

@@ -69,15 +69,8 @@ export function AddLoanModal({ open, tripId, members, currency, currentMemberId,
   };
 
   return (
-    <Modal open={open} onClose={onClose}>
-      <div className="modal-header">
-          <h2 className="modal-title">Record a loan</h2>
-          <button className="modal-close" onClick={onClose}>
-            ✕
-          </button>
-        </div>
-
-        <form className="modal-form" onSubmit={handleSubmit(onSubmit)} noValidate>
+    <Modal open={open} onClose={onClose} title="Record a loan">
+      <form className="modal-form" onSubmit={handleSubmit(onSubmit)} noValidate>
           <div className="form-group">
             <label className="form-label" htmlFor="loan-lender">
               Who lent the money

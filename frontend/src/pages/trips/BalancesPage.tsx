@@ -13,11 +13,13 @@ import { Button } from '@/components/common/Button';
 import { QueryErrorState } from '@/components/common/QueryErrorState';
 import { getApiErrorMessage } from '@/api/errors';
 import { formatAmount } from '@/lib/utils';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import type { SuggestedSettlement } from '@/api/types';
 import './BalancesPage.css';
 
 export function BalancesPage() {
   const { tripId } = useParams<{ tripId: string }>();
+  useDocumentTitle('Trip Balances');
   const user = useAuthStore((s) => s.user);
   const addToast = useUIStore((s) => s.addToast);
 
@@ -136,7 +138,7 @@ export function BalancesPage() {
             />
           ) : suggestionsData?.suggestedSettlements.length === 0 ? (
             <div className="empty-state" style={{ padding: '40px 0' }}>
-              <div className="empty-state-icon">🎉</div>
+              <div className="empty-state-icon" aria-hidden="true">🎉</div>
               <div className="empty-state-title">All settled up!</div>
               <div className="empty-state-desc">
                 Nobody owes anything in this trip right now.
@@ -160,7 +162,7 @@ export function BalancesPage() {
                     <div className="suggestion-arrow">
                       <span className="suggestion-arrow-line" />
                       <MonoAmount value={s.amount} currency={currency} className="suggestion-amount" />
-                      <span className="suggestion-arrow-head">➔</span>
+                      <span className="suggestion-arrow-head" aria-hidden="true">➔</span>
                     </div>
                     <div className="suggestion-person">
                       <Avatar name={s.toMemberName} size="sm" />

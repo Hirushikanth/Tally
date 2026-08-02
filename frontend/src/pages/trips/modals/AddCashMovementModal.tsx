@@ -82,15 +82,8 @@ export function AddCashMovementModal({
   };
 
   return (
-    <Modal open={open} onClose={onClose}>
-      <div className="modal-header">
-          <h2 className="modal-title">Record a payment</h2>
-          <button className="modal-close" onClick={onClose}>
-            ✕
-          </button>
-        </div>
-
-        <form className="modal-form" onSubmit={handleSubmit(onSubmit)} noValidate>
+    <Modal open={open} onClose={onClose} title="Record a payment">
+      <form className="modal-form" onSubmit={handleSubmit(onSubmit)} noValidate>
           {/* Type toggle — one shared form, label-only difference */}
           <div className="form-group">
             <div className="form-label" style={{ marginBottom: 10 }}>

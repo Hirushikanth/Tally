@@ -60,7 +60,7 @@ export function Sidebar() {
 
       {/* Navigation — only shown when inside a trip */}
       {tripId && (
-        <nav className="sidebar-nav">
+        <nav className="sidebar-nav" aria-label="Main">
           {NAV_ITEMS.map((item) => (
             <NavLink
               key={item.label}
@@ -71,7 +71,9 @@ export function Sidebar() {
               }
               onClick={closeDrawer}
             >
-              <span className="sidebar-nav-icon">{item.icon}</span>
+              <span className="sidebar-nav-icon" aria-hidden="true">
+                {item.icon}
+              </span>
               {item.label}
             </NavLink>
           ))}
@@ -120,8 +122,12 @@ export function Sidebar() {
             </div>
           </>
         )}
-        <button className="sidebar-logout" onClick={handleLogout} title="Sign out">
-          ⏻
+        <button
+          className="sidebar-logout"
+          onClick={handleLogout}
+          aria-label="Sign out"
+        >
+          <span aria-hidden="true">⏻</span>
         </button>
       </div>
     </aside>

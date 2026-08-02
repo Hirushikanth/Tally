@@ -7,6 +7,7 @@ import { Button } from '@/components/common/Button';
 import { QueryErrorState } from '@/components/common/QueryErrorState';
 import { useUIStore } from '@/store/ui.store';
 import { categoryIcon, eventTypeLabel, formatDate } from '@/lib/utils';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { AddExpenseModal } from './modals/AddExpenseModal';
 import { AddLoanModal } from './modals/AddLoanModal';
 import { AddCashMovementModal } from './modals/AddCashMovementModal';
@@ -15,6 +16,7 @@ import './ExpensesPage.css';
 
 export function ExpensesPage() {
   const { tripId } = useParams<{ tripId: string }>();
+  useDocumentTitle('All Expenses');
   const user = useAuthStore((s) => s.user);
   const { data: trip } = useTrip(tripId ?? null);
   const {
@@ -54,8 +56,12 @@ export function ExpensesPage() {
           </p>
         </div>
         <div className="expenses-actions">
-          <Button onClick={() => setAddLoanModalOpen(true)}>💸 Loan</Button>
-          <Button onClick={() => setAddCashMovementModalOpen(true)}>✓ Record payment</Button>
+          <Button onClick={() => setAddLoanModalOpen(true)}>
+            <span aria-hidden="true">💸</span> Loan
+          </Button>
+          <Button onClick={() => setAddCashMovementModalOpen(true)}>
+            <span aria-hidden="true">✓</span> Record payment
+          </Button>
           <Button variant="primary" onClick={() => setAddExpenseModalOpen(true)}>
             + Add expense
           </Button>
@@ -74,7 +80,7 @@ export function ExpensesPage() {
           />
         ) : sortedEvents.length === 0 ? (
           <div className="empty-state" style={{ padding: '60px 0' }}>
-            <div className="empty-state-icon">🧾</div>
+            <div className="empty-state-icon" aria-hidden="true">🧾</div>
             <div className="empty-state-title">No expenses yet</div>
             <div className="empty-state-desc">
               Add your first expense to start tracking this trip's spending.
@@ -87,7 +93,7 @@ export function ExpensesPage() {
           <>
             {sortedEvents.map((event) => (
               <div key={event.id} className="expenses-row">
-                <div className="expenses-icon">{categoryIcon(event.category)}</div>
+                <div className="expenses-icon" aria-hidden="true">{categoryIcon(event.category)}</div>
                 <div className="expenses-main">
                   <div className="expenses-row-title">
                     {event.notes || eventTypeLabel(event.type)}

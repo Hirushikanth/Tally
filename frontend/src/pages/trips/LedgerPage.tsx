@@ -9,11 +9,13 @@ import { Avatar } from '@/components/common/Avatar';
 import { MonoAmount } from '@/components/common/MonoAmount';
 import { QueryErrorState } from '@/components/common/QueryErrorState';
 import { formatDate, eventTypeLabel, categoryIcon } from '@/lib/utils';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import type { MemberLedgerEntry } from '@/api/types';
 import './LedgerPage.css';
 
 export function LedgerPage() {
   const { tripId } = useParams<{ tripId: string }>();
+  useDocumentTitle('Member Ledger');
   const user = useAuthStore((s) => s.user);
   const { data: trip } = useTrip(tripId ?? null);
 
@@ -100,7 +102,7 @@ export function LedgerPage() {
           />
         ) : !ledger || ledger.items.length === 0 ? (
           <div className="empty-state" style={{ padding: '60px 0' }}>
-            <div className="empty-state-icon">🪙</div>
+            <div className="empty-state-icon" aria-hidden="true">🪙</div>
             <div className="empty-state-title">No activity yet</div>
             <div className="empty-state-desc">
               {activeMember
@@ -129,7 +131,7 @@ function LedgerRow({ entry, index }: { entry: MemberLedgerEntry; index: number }
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.04, duration: 0.22, ease: 'easeOut' }}
     >
-      <div className="ledger-icon">{categoryIcon(event.category)}</div>
+      <div className="ledger-icon" aria-hidden="true">{categoryIcon(event.category)}</div>
       <div className="ledger-main">
         <div className="ledger-row-title">
           {event.notes || eventTypeLabel(event.type)}

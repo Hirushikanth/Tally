@@ -15,6 +15,7 @@ import { AddLoanModal } from './modals/AddLoanModal';
 import { AddCashMovementModal } from './modals/AddCashMovementModal';
 import { AddMemberModal } from './modals/AddMemberModal';
 import { formatAmount, formatBalance, categoryIcon, eventTypeLabel, formatDate } from '@/lib/utils';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import type { BusinessEvent, MemberBalanceDto } from '@/api/types';
 import './TripDashboardPage.css';
 
@@ -33,6 +34,7 @@ export function TripDashboardPage() {
   const { data: trip, isLoading: tripLoading, isError: tripError, refetch: refetchTrip } = useTrip(tripId ?? null);
   const { data: events, isLoading: eventsLoading, isError: eventsError, refetch: refetchEvents } = useEvents(tripId ?? null);
   const { data: balancesData, isError: balancesError, refetch: refetchBalances } = useBalances(tripId ?? null);
+  useDocumentTitle(trip?.name ?? 'Trip');
 
   if (!tripId) return <Navigate to="/trips" replace />;
 
@@ -89,13 +91,13 @@ export function TripDashboardPage() {
         </div>
         <div className="dashboard-actions">
           <Button onClick={() => setAddMemberModalOpen(true)}>
-            👤 Add member
+            <span aria-hidden="true">👤</span> Add member
           </Button>
           <Button onClick={() => setAddLoanModalOpen(true)}>
-            💸 Loan
+            <span aria-hidden="true">💸</span> Loan
           </Button>
           <Button onClick={() => setAddCashMovementModalOpen(true)}>
-            ✓ Record payment
+            <span aria-hidden="true">✓</span> Record payment
           </Button>
           <Button variant="primary" onClick={() => setAddExpenseModalOpen(true)}>
             + Add expense
@@ -153,7 +155,7 @@ export function TripDashboardPage() {
             />
           ) : recentEvents.length === 0 ? (
             <div className="empty-state" style={{ padding: '40px 0' }}>
-              <div className="empty-state-icon">🧾</div>
+              <div className="empty-state-icon" aria-hidden="true">🧾</div>
               <div className="empty-state-title">No expenses yet</div>
               <div className="empty-state-desc">Add your first expense to start tracking.</div>
             </div>
@@ -219,7 +221,7 @@ export function TripDashboardPage() {
               className="settle-btn"
               onClick={() => setAddCashMovementModalOpen(true)}
             >
-              Settle up →
+              Settle up <span aria-hidden="true">→</span>
             </button>
           </GlassCard>
         </div>
@@ -311,7 +313,7 @@ function ExpenseRow({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.04, duration: 0.22, ease: 'easeOut' }}
     >
-      <div className="expense-icon">{icon}</div>
+      <div className="expense-icon" aria-hidden="true">{icon}</div>
       <div className="expense-main">
         <div className="expense-title">
           {event.notes || eventTypeLabel(event.type)}

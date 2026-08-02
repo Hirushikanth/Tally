@@ -249,15 +249,8 @@ export function AddExpenseModal({
   };
 
   return (
-    <Modal open={open} onClose={onClose}>
-      <div className="modal-header">
-          <h2 className="modal-title">Add expense</h2>
-          <button className="modal-close" onClick={onClose}>
-            ✕
-          </button>
-        </div>
-
-        <form className="modal-form" onSubmit={handleSubmit(onSubmit)} noValidate>
+    <Modal open={open} onClose={onClose} title="Add expense">
+      <form className="modal-form" onSubmit={handleSubmit(onSubmit)} noValidate>
           {/* Amount */}
           <div className="form-group">
             <label className="form-label" htmlFor="exp-amount">
@@ -331,7 +324,7 @@ export function AddExpenseModal({
                     >
                       <Avatar name={m.user.name} size="sm" />
                       <span>{m.user.name}</span>
-                      <span className="payer-check">{isPayer ? '✓' : ''}</span>
+                      <span className="payer-check" aria-hidden="true">{isPayer ? '✓' : ''}</span>
                     </button>
                     <div className="amount-input-wrap payer-amount">
                       <span className="amount-prefix">Rs</span>
@@ -400,7 +393,9 @@ export function AddExpenseModal({
                   >
                     <Avatar name={m.user.name} size="sm" />
                     <span>{m.user.name.split(' ')[0]}</span>
-                    {selected && <span className="participant-check">✓</span>}
+                    {selected && (
+                      <span className="participant-check" aria-hidden="true">✓</span>
+                    )}
                   </button>
                 );
               })}

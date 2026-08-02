@@ -11,6 +11,7 @@ import { Modal } from '@/components/common/Modal';
 import { QueryErrorState } from '@/components/common/QueryErrorState';
 import { getApiErrorMessage } from '@/api/errors';
 import { formatDate } from '@/lib/utils';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import type { Trip } from '@/api/types';
 import './TripsListPage.css';
 
@@ -23,6 +24,7 @@ const newTripSchema = z.object({
 type NewTripForm = z.infer<typeof newTripSchema>;
 
 export function TripsListPage() {
+  useDocumentTitle('Your Trips');
   const navigate = useNavigate();
   const { data: trips, isLoading, isError, refetch } = useTrips();
   const createTrip = useCreateTrip();
@@ -82,7 +84,7 @@ export function TripsListPage() {
         />
       ) : activeTrips.length === 0 && archivedTrips.length === 0 ? (
         <div className="empty-state glass" style={{ margin: '40px 0', borderRadius: 16, padding: '80px 40px' }}>
-          <div className="empty-state-icon">🗺️</div>
+          <div className="empty-state-icon" aria-hidden="true">🗺️</div>
           <div className="empty-state-title">No trips yet</div>
           <div className="empty-state-desc">
             Create your first trip to start tracking group expenses together.
@@ -127,17 +129,12 @@ export function TripsListPage() {
       )}
 
       {/* New trip modal */}
-      <Modal open={newTripModalOpen} onClose={() => setNewTripModalOpen(false)}>
-        <div className="modal-header">
-          <h2 className="modal-title">New trip</h2>
-          <button
-            className="modal-close"
-            onClick={() => setNewTripModalOpen(false)}
-          >
-            ✕
-          </button>
-        </div>
-            <form
+      <Modal
+        open={newTripModalOpen}
+        onClose={() => setNewTripModalOpen(false)}
+        title="New trip"
+      >
+        <form
               style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
               onSubmit={handleSubmit(onCreateTrip)}
               noValidate

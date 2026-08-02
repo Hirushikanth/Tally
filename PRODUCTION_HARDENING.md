@@ -543,6 +543,42 @@ pnpm --filter frontend build
 pnpm --filter frontend preview   # manual axe scan + keyboard walkthrough
 ```
 
+### Status — H8 complete (2026-08-03)
+
+- **Modal** (`components/common/Modal.tsx`): now renders its own header —
+  takes a `title` prop (required) that becomes the `h2` accessible name wired
+  via `aria-labelledby` (generated `useId`), optional `description` →
+  `aria-describedby` via an `.sr-only` paragraph. Focus trap (`Tab`/`Shift+Tab`
+  wrap within the dialog), `Escape` closes, focus moves into the dialog on
+  open and restores to the trigger on close. Close button centralized with
+  `aria-label="Close"`. All 5 callers (4 add-modals + new-trip modal) updated;
+  duplicated headers removed.
+- **Icon-only controls** named: modal close ✕ (in Modal), sidebar logout ⏻
+  (`aria-label="Sign out"`, icon `aria-hidden`), mobile menu already had one.
+  Payer toggles/participant chips carry visible names; their ✓ marks are now
+  `aria-hidden`.
+- **Focus styles** (`index.css`): global `:focus-visible` outline (2px gold,
+  offset) for all controls; explicit `.form-input:focus-visible` /
+  `.form-select:focus-visible` outlines (existing `outline: none` on those
+  classes would otherwise swallow the global rule) and a box-shadow on
+  `.form-select:focus` to match inputs.
+- **Decorative emoji** wrapped in `aria-hidden` spans / `role`-free divs:
+  empty-state icons (🗺️ 🧾 🎉 🪙), category icons in expense/ledger rows,
+  button glyphs (👤 💸 ✓), sidebar nav glyphs, toast type icons,
+  settlement arrow, "Settle up →" arrow.
+- **Landmarks**: each page has exactly one `h1` (verified); sidebar nav is
+  `<nav aria-label="Main">`; `AppShell` got a keyboard-only `.skip-link`
+  ("Skip to content" → `#main-content`).
+- **Document titles**: new `hooks/useDocumentTitle.ts` — "Sign in",
+  "Create account", "Your Trips", "<trip name>", "All Expenses",
+  "Trip Balances", "Member Ledger" (all " — Tally").
+- **Automated axe baseline** (`src/a11y/axe.test.tsx`, `axe-core`): runs
+  wcag2a + wcag2aa against the rendered Login page and Trips list page and
+  fails on any critical/serious violation — currently 0. (Manual devtools
+  scan still recommended at release per the DoD.)
+- Tests: 70 passing (Modal suite extended with Escape, focus-in, focus
+  restore, tab-cycle, aria-describedby cases). `build` + `lint` green.
+
 ---
 
 ## Phase H9 — Performance (frontend)

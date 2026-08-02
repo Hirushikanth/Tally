@@ -19,7 +19,7 @@ export function ToastContainer() {
             exit={{ opacity: 0, x: 24, scale: 0.96 }}
             transition={{ type: 'spring', stiffness: 380, damping: 30 }}
           >
-            <span>
+            <span aria-hidden="true">
               {toast.type === 'success' ? '✓' : toast.type === 'error' ? '✕' : 'ℹ'}
             </span>
             {toast.message}

@@ -20,6 +20,9 @@ export function AppShell() {
   return (
     <>
       <Stars />
+      <a href="#main-content" className="skip-link">
+        Skip to content
+      </a>
       <div className="app-shell">
         {/* Mobile top bar */}
         <header className="mobile-topbar">
@@ -53,7 +56,7 @@ export function AppShell() {
 
         <Sidebar />
 
-        <main className="app-main">
+        <main className="app-main" id="main-content">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={location.pathname}
