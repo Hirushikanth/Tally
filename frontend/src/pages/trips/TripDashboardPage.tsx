@@ -1,4 +1,5 @@
 import { useParams, Navigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useTrip } from '@/hooks/useTrips';
 import { useEvents } from '@/hooks/useEvents';
 import { useBalances } from '@/hooks/useLedger';
@@ -146,8 +147,8 @@ export function TripDashboardPage() {
               <div className="empty-state-desc">Add your first expense to start tracking.</div>
             </div>
           ) : (
-            recentEvents.map((event) => (
-              <ExpenseRow key={event.id} event={event} currency={trip.currency} />
+            recentEvents.map((event, idx) => (
+              <ExpenseRow key={event.id} event={event} currency={trip.currency} index={idx} />
             ))
           )}
         </GlassCard>
@@ -190,8 +191,8 @@ export function TripDashboardPage() {
             <div className="panel-header">
               <h3 className="panel-title">Balances</h3>
             </div>
-            {balancesData?.balances.map((b) => (
-              <BalanceRow key={b.memberId} balance={b} currentUserId={user?.id} />
+            {balancesData?.balances.map((b, idx) => (
+              <BalanceRow key={b.memberId} balance={b} currentUserId={user?.id} index={idx} />
             ))}
             {(!balancesData || balancesData.balances.length === 0) && (
               <p style={{ color: 'var(--text-low)', fontSize: 13, padding: '8px 0' }}>
@@ -209,42 +210,38 @@ export function TripDashboardPage() {
       </div>
 
       {/* Modals */}
-      {addExpenseModalOpen && myMember && (
-        <AddExpenseModal
-          tripId={tripId}
-          members={trip.members}
-          currency={trip.currency}
-          currentMemberId={myMember.id}
-          onClose={() => setAddExpenseModalOpen(false)}
-        />
-      )}
+      <AddExpenseModal
+        open={addExpenseModalOpen && !!myMember}
+        tripId={tripId}
+        members={trip.members}
+        currency={trip.currency}
+        currentMemberId={myMember?.id ?? ''}
+        onClose={() => setAddExpenseModalOpen(false)}
+      />
 
-      {addLoanModalOpen && myMember && (
-        <AddLoanModal
-          tripId={tripId}
-          members={trip.members}
-          currency={trip.currency}
-          currentMemberId={myMember.id}
-          onClose={() => setAddLoanModalOpen(false)}
-        />
-      )}
+      <AddLoanModal
+        open={addLoanModalOpen && !!myMember}
+        tripId={tripId}
+        members={trip.members}
+        currency={trip.currency}
+        currentMemberId={myMember?.id ?? ''}
+        onClose={() => setAddLoanModalOpen(false)}
+      />
 
-      {addCashMovementModalOpen && myMember && (
-        <AddCashMovementModal
-          tripId={tripId}
-          members={trip.members}
-          currency={trip.currency}
-          currentMemberId={myMember.id}
-          onClose={() => setAddCashMovementModalOpen(false)}
-        />
-      )}
+      <AddCashMovementModal
+        open={addCashMovementModalOpen && !!myMember}
+        tripId={tripId}
+        members={trip.members}
+        currency={trip.currency}
+        currentMemberId={myMember?.id ?? ''}
+        onClose={() => setAddCashMovementModalOpen(false)}
+      />
 
-      {addMemberModalOpen && (
-        <AddMemberModal
-          tripId={tripId}
-          onClose={() => setAddMemberModalOpen(false)}
-        />
-      )}
+      <AddMemberModal
+        open={addMemberModalOpen}
+        tripId={tripId}
+        onClose={() => setAddMemberModalOpen(false)}
+      />
     </div>
   );
 }
@@ -279,12 +276,25 @@ function StatCard({
   );
 }
 
-function ExpenseRow({ event, currency }: { event: BusinessEvent; currency: string }) {
+function ExpenseRow({
+  event,
+  currency,
+  index,
+}: {
+  event: BusinessEvent;
+  currency: string;
+  index: number;
+}) {
   const icon = categoryIcon(event.category);
   const paidBy = event.createdBy?.name ?? 'Unknown';
 
   return (
-    <div className="expense-row">
+    <motion.div
+      className="expense-row"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.04, duration: 0.22, ease: 'easeOut' }}
+    >
       <div className="expense-icon">{icon}</div>
       <div className="expense-main">
         <div className="expense-title">
@@ -303,20 +313,27 @@ function ExpenseRow({ event, currency }: { event: BusinessEvent; currency: strin
       <div className="expense-amount">
         <MonoAmount value={event.amount} currency={currency} />
       </div>
-    </div>
+    </motion.div>
   );
 }
 
 function BalanceRow({
   balance,
   currentUserId,
+  index,
 }: {
   balance: MemberBalanceDto;
   currentUserId?: string;
+  index: number;
 }) {
   const isMe = balance.userId === currentUserId;
   return (
-    <div className="balance-row">
+    <motion.div
+      className="balance-row"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.04, duration: 0.22, ease: 'easeOut' }}
+    >
       <div className="balance-who">
         <Avatar name={balance.userName} size="sm" />
         <span>
@@ -327,7 +344,7 @@ function BalanceRow({
         </span>
       </div>
       <MonoAmount value={balance.balance} asBalance />
-    </div>
+    </motion.div>
   );
 }
 

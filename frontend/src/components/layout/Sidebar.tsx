@@ -20,20 +20,33 @@ export function Sidebar() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const setNewTripModalOpen = useUIStore((s) => s.setNewTripModalOpen);
+  const sidebarOpen = useUIStore((s) => s.sidebarOpen);
+  const setSidebarOpen = useUIStore((s) => s.setSidebarOpen);
+
+  const closeDrawer = () => setSidebarOpen(false);
 
   const handleLogout = () => {
     logout();
+    setSidebarOpen(false);
     navigate('/login');
   };
 
+  const goToTrip = (id: string) => {
+    setSidebarOpen(false);
+    navigate(`/trips/${id}`);
+  };
+
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
       {/* Brand */}
       <div className="sidebar-brand">
         <div className="sidebar-brand-mark">T</div>
         <div className="sidebar-brand-name">
           Tally<span className="sidebar-brand-dot">.</span>
         </div>
+        <button className="sidebar-close" onClick={closeDrawer} aria-label="Close menu">
+          ✕
+        </button>
       </div>
 
       {/* Navigation — only shown when inside a trip */}
@@ -47,6 +60,7 @@ export function Sidebar() {
               className={({ isActive }) =>
                 `sidebar-nav-item ${isActive ? 'active' : ''}`
               }
+              onClick={closeDrawer}
             >
               <span className="sidebar-nav-icon">{item.icon}</span>
               {item.label}
@@ -65,7 +79,7 @@ export function Sidebar() {
               <button
                 key={trip.id}
                 className={`sidebar-trip-chip ${trip.id === tripId ? 'active' : ''}`}
-                onClick={() => navigate(`/trips/${trip.id}`)}
+                onClick={() => goToTrip(trip.id)}
               >
                 <span className="sidebar-trip-name">{trip.name}</span>
                 <span className="sidebar-trip-meta">
@@ -76,7 +90,10 @@ export function Sidebar() {
           })}
           <button
             className="sidebar-trip-chip new-trip"
-            onClick={() => setNewTripModalOpen(true)}
+            onClick={() => {
+              setSidebarOpen(false);
+              setNewTripModalOpen(true);
+            }}
           >
             <span>+ New trip</span>
           </button>

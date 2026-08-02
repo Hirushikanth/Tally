@@ -174,3 +174,35 @@
 .ledger-running.negative {
   color: var(--red);
 }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 900px) {
+  .ledger-page {
+    padding: 22px 20px 48px;
+  }
+
+  .ledger-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .ledger-list {
+    padding: 8px 12px;
+  }
+}
+
+@media (max-width: 560px) {
+  .ledger-page {
+    padding: 18px 14px 40px;
+  }
+
+  .ledger-summary-card {
+    padding: 16px;
+  }
+
+  .ledger-row {
+    gap: 10px;
+  }
+}

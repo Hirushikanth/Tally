@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useCreateSharedExpense } from '@/hooks/useEvents';
 import { useUIStore } from '@/store/ui.store';
 import { Button } from '@/components/common/Button';
+import { Modal } from '@/components/common/Modal';
 import { Avatar } from '@/components/common/Avatar';
 import { formatAmount } from '@/lib/utils';
 import type { SplitDto, SplitMethod, TripMember } from '@/api/types';
@@ -39,6 +40,7 @@ function parseFloatSafe(value: string | undefined): number {
 }
 
 interface Props {
+  open: boolean;
   tripId: string;
   members: TripMember[];
   currency: string;
@@ -47,6 +49,7 @@ interface Props {
 }
 
 export function AddExpenseModal({
+  open,
   tripId,
   members,
   currency,
@@ -244,9 +247,8 @@ export function AddExpenseModal({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
+    <Modal open={open} onClose={onClose}>
+      <div className="modal-header">
           <h2 className="modal-title">Add expense</h2>
           <button className="modal-close" onClick={onClose}>
             ✕
@@ -499,7 +501,6 @@ export function AddExpenseModal({
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }

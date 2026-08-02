@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useAddMember } from '@/hooks/useMembers';
 import { useUIStore } from '@/store/ui.store';
 import { Button } from '@/components/common/Button';
+import { Modal } from '@/components/common/Modal';
 import './Modals.css';
 
 const schema = z.object({
@@ -14,11 +15,12 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 interface Props {
+  open: boolean;
   tripId: string;
   onClose: () => void;
 }
 
-export function AddMemberModal({ tripId, onClose }: Props) {
+export function AddMemberModal({ open, tripId, onClose }: Props) {
   const addMember = useAddMember(tripId);
   const addToast = useUIStore((s) => s.addToast);
 
@@ -44,13 +46,12 @@ export function AddMemberModal({ tripId, onClose }: Props) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" style={{ maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2 className="modal-title">Add member</h2>
-          <button className="modal-close" onClick={onClose}>✕</button>
-        </div>
-        <form className="modal-form" onSubmit={handleSubmit(onSubmit)} noValidate>
+    <Modal open={open} onClose={onClose} panelStyle={{ maxWidth: 400 }}>
+      <div className="modal-header">
+        <h2 className="modal-title">Add member</h2>
+        <button className="modal-close" onClick={onClose}>✕</button>
+      </div>
+      <form className="modal-form" onSubmit={handleSubmit(onSubmit)} noValidate>
           <div className="form-group">
             <label className="form-label" htmlFor="member-email">
               Email address
@@ -87,7 +88,6 @@ export function AddMemberModal({ tripId, onClose }: Props) {
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }

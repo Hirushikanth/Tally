@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useCreateCashMovement } from '@/hooks/useEvents';
 import { useUIStore } from '@/store/ui.store';
 import { Button } from '@/components/common/Button';
+import { Modal } from '@/components/common/Modal';
 import type { TripMember } from '@/api/types';
 import './Modals.css';
 
@@ -25,6 +26,7 @@ const schema = z
 type FormData = z.infer<typeof schema>;
 
 interface Props {
+  open: boolean;
   tripId: string;
   members: TripMember[];
   currency: string;
@@ -33,6 +35,7 @@ interface Props {
 }
 
 export function AddCashMovementModal({
+  open,
   tripId,
   members,
   currency,
@@ -77,9 +80,8 @@ export function AddCashMovementModal({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
+    <Modal open={open} onClose={onClose}>
+      <div className="modal-header">
           <h2 className="modal-title">Record a payment</h2>
           <button className="modal-close" onClick={onClose}>
             ✕
@@ -194,7 +196,6 @@ export function AddCashMovementModal({
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }

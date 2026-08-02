@@ -6,46 +6,70 @@ A ledger-based collaborative expense management platform for trips, roommates, a
 
 ## What Tally does
 
-- Every financial fact enters as an immutable **Business Event** (shared expense, loan, repayment, settlement, refund, adjustment) — nothing is ever edited or deleted; corrections are new events.
-- A single unified, append-only **journal** per trip is the one source of truth. Balances, ledger views, and settlement suggestions are all *derived* from it.
-- Invariants (postings sum to zero, every event has ≥1 posting, refunds must reference a real prior event, history is append-only) are enforced at the **database level** with deferred constraint triggers — not just in application code.
-- Debt simplification is a **read-only suggestion** — it becomes real only when you record an actual settlement.
+- Every financial fact enters as an immutable **Business Event** — shared expense, loan, repayment, settlement, refund, or adjustment. Nothing is ever edited or deleted; mistakes are corrected by appending a new event that nets out the error, so both the mistake and the fix stay visible forever.
+- A single unified, append-only **journal** (`Posting` table) per trip is the one source of truth. Balances, ledger views, and settlement suggestions are all *derived* from it — never stored as independent truth.
+- Invariants are enforced at the **database level**, not just in application code:
+  - postings for every event sum to exactly **zero** (deferred constraint trigger)
+  - every event has **≥ 1 posting** (deferred constraint trigger)
+  - a `REFUND` must reference a real prior event (`refundOfId` CHECK constraint)
+  - `Posting` / `BusinessEvent` rows are **append-only** (`UPDATE`/`DELETE` revoked from the runtime DB role)
+- Debt simplification is a **read-only suggestion** (minimal-transfers algorithm) — it becomes a real ledger entry only when you record an actual settlement.
+- `REPAYMENT` and `SETTLEMENT` share one posting implementation; the type is a label only, never branched on in accounting logic.
+- A cinematic dark UI: deep-space palette, glassmorphism, gold accents, Framer Motion micro-animations, and a fully responsive mobile layout.
 
 ## Tech stack
 
 | Layer | Choice |
 |---|---|
-| Database | PostgreSQL |
+| Database | PostgreSQL (Neon) |
 | ORM | Prisma |
 | Backend | Node.js + TypeScript + NestJS |
-| Frontend | React + Vite + TypeScript (custom CSS design system) |
+| Frontend | React 19 + Vite + TypeScript (custom CSS design system) |
 | Client state | Zustand (UI state) + TanStack Query (server state) |
 | Auth | JWT (passport-jwt, bcrypt) |
+| Animations | Framer Motion |
+
+## Architecture
+
+Strict one-directional layering, designed so the accounting core is testable in complete isolation:
+
+```
+Controllers → Application Services → Posting Engine (pure) → Repository (Prisma) → PostgreSQL
+```
+
+- **Posting Engine** (`backend/src/posting-engine/`) — pure functions, no Nest decorators, no Prisma, no side effects. One function per event type, all funneled through a shared zero-sum guard. Extractable into its own package with zero code changes.
+- **Repository** — the *only* place Prisma is called for events/postings; persists `BusinessEvent` + `Posting[]` in one atomic `$transaction`.
+- **Metadata isolation** — `category`, `notes`, and `attachments` are split off at the Service boundary and never reach the Posting Engine.
+
+See `ACCOUNTING.md` (the accounting constitution) and `ARCHITECTURE.md` for the full design. `PROJECT_CONTEXT.md` is the single source of truth; `DEVELOPMENT_TIMELINE.md` tracks the phase-by-phase build.
 
 ## Repository layout
 
 ```
-backend/
-├── src/
-│   ├── auth/            JWT strategy, guards, role decorator
-│   ├── trips/           trips API
-│   ├── members/         members API
-│   ├── events/          business events (controller → service → repository)
-│   ├── posting-engine/  pure accounting core — no Nest, no Prisma
-│   ├── ledger/          read path: balances, member ledger, snapshot rebuild
-│   ├── settlements/     settlement suggestion service (read-model only)
-│   └── common/          Prisma client, domain error filter
-├── prisma/
-│   ├── schema.prisma
-│   └── migrations/      incl. invariant enforcement triggers
-└── tests/               posting engine, service, integration, e2e suites
-frontend/
-└── src/
-    ├── api/             typed API client layer
-    ├── store/           Zustand (UI-only state)
-    ├── hooks/           TanStack Query hooks (server state)
-    ├── pages/           auth, trips list, dashboard, expenses, balances, ledger
-    └── components/      shared presentational components
+.
+├── backend/
+│   ├── src/
+│   │   ├── auth/            JWT strategy, guards, role decorator
+│   │   ├── trips/           trips API
+│   │   ├── members/         members API
+│   │   ├── events/          business events (controller → service → repository)
+│   │   ├── posting-engine/  pure accounting core — no Nest, no Prisma
+│   │   ├── ledger/          read path: balances, member ledger, snapshot rebuild
+│   │   ├── settlements/     settlement suggestion service (read-model only)
+│   │   └── common/          Prisma client, domain error filter
+│   ├── prisma/
+│   │   ├── schema.prisma
+│   │   └── migrations/      incl. invariant enforcement triggers
+│   └── tests/               posting engine, service, integration, e2e suites
+├── frontend/
+│   └── src/
+│       ├── api/             typed API client layer (Axios + auth interceptor)
+│       ├── store/           Zustand (UI-only state)
+│       ├── hooks/           TanStack Query hooks (server state)
+│       ├── pages/           auth, trips list, dashboard, expenses, balances, ledger
+│       └── components/      shared presentational components (incl. animated Modal)
+├── .github/workflows/       CI: lint + tests on push
+└── pnpm-workspace.yaml
 ```
 
 ## Prerequisites
@@ -75,6 +99,8 @@ cp backend/.env.example backend/.env
 # Set DATABASE_URL (and a JWT_SECRET for auth) in backend/.env
 ```
 
+`.env` files are git-ignored; never commit real credentials.
+
 ### 3. Install & migrate
 
 ```bash
@@ -83,7 +109,9 @@ pnpm --filter backend exec prisma generate
 pnpm --filter backend exec prisma migrate deploy
 ```
 
-The invariant migration (`..._enforce_invariants/migration.sql`) runs as part of `migrate deploy` and sets up the zero-sum / ≥1-posting / refund-reference / append-only triggers.
+The invariant migration (`..._enforce_invariants/migration.sql`) runs as part of `migrate deploy` and installs the zero-sum / ≥1-posting / refund-reference triggers and the append-only privilege revokes.
+
+> **Neon note:** create a separate restricted `app_runtime` role (distinct from the project owner) for `DATABASE_URL`, or the `REVOKE UPDATE, DELETE` enforcement has no effect.
 
 ### 4. Run
 
@@ -94,7 +122,7 @@ pnpm dev:backend
 pnpm dev:frontend
 ```
 
-Open http://localhost:5173, register an account, create a trip, and start recording.
+Open http://localhost:5173, register an account, create a trip, and start recording. The frontend proxies `/api` to `localhost:3000` (Vite dev proxy).
 
 ## Scripts
 
@@ -102,19 +130,20 @@ Open http://localhost:5173, register an account, create a trip, and start record
 |---|---|
 | `pnpm dev` | Run backend + frontend in watch mode |
 | `pnpm dev:backend` / `pnpm dev:frontend` | Run one side only |
-| `pnpm lint` | Lint all packages |
-| `pnpm test` | All tests: posting engine + integration (requires a running Postgres) |
-| `pnpm --filter backend test:posting-engine` | Pure unit tests for the accounting core |
-| `pnpm --filter backend test:integration` | Repository/E2E tests against real Postgres (triggers verified) |
-| `pnpm --filter backend test:e2e` | HTTP round-trip smoke test |
-| `pnpm --filter backend build` | Build backend |
-| `pnpm --filter frontend build` | Build frontend |
+| `pnpm lint` | Lint all packages (ESLint backend, oxlint frontend) |
+| `pnpm test` | All backend tests: posting engine + integration (requires a running Postgres) |
+| `pnpm --filter backend test:posting-engine` | Pure unit tests for the accounting core — no DB, no mocks |
+| `pnpm --filter backend test:integration` | Repository tests against real Postgres (triggers verified) |
+| `pnpm --filter backend test:e2e` | HTTP round-trip tests |
+| `pnpm --filter backend build` | Build backend (Nest) |
+| `pnpm --filter frontend build` | Build frontend (tsc + Vite) |
 
 ## Testing strategy
 
-- **Posting Engine** — pure, table-driven unit tests with no mocks and no DB (`tests/posting-engine.spec.ts`), mapping 1:1 to the accounting validation checklist.
-- **Repository / integration** — deliberately **not mocked**: they hit a real Postgres so the deferred constraint triggers are proven to reject bad writes (non-zero sums, zero postings, refunds without a source event).
+- **Posting Engine** — pure, table-driven unit tests with no mocks and no DB (`tests/posting-engine.spec.ts`), mapping 1:1 to the accounting validation checklist (every event sums to zero, ≥1 posting per event, refund requires a source, append-only).
+- **Repository / integration** — deliberately **not mocked**: they hit a real Postgres so the deferred constraint triggers are *proven* to reject bad writes (non-zero sums, zero postings, refunds without a source event, update/delete attempts).
 - **E2E** — full HTTP round trips per event type plus rejection paths via Supertest.
+- **CI** — GitHub Actions runs lint + tests on every push.
 
 ## Sign convention & vocabulary
 
@@ -125,6 +154,16 @@ Open http://localhost:5173, register an account, create a trip, and start record
 
 ## Roadmap status
 
-Implemented: Phases 0–7 (foundation, posting engine, persistence + DB invariants, auth & domain APIs, all six event types, read path, frontend features).
+Implemented: Phases 0–8:
 
-Remaining: visual polish pass, full QA, deployment (Render + Vercel + Neon), documentation.
+- Foundation, Posting Engine, persistence layer with DB-enforced invariants
+- Auth (JWT + roles), Trips/Members APIs, all six Business Event types
+- Read path: balances, member ledger, settlement suggestions, balance snapshot
+- Frontend features: expense/loan/payment forms, dashboard, balances, ledger view
+- Visual design pass: dark glassmorphism theme, Framer Motion micro-animations, responsive mobile layout (off-canvas sidebar, bottom-sheet modals)
+
+Remaining: full QA, deployment (Render + Vercel + Neon), documentation.
+
+## License
+
+Private — this project is not published.

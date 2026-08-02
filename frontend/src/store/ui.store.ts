@@ -5,6 +5,10 @@ interface UIState {
   activeTripId: string | null;
   setActiveTripId: (id: string | null) => void;
 
+  // Mobile off-canvas sidebar
+  sidebarOpen: boolean;
+  setSidebarOpen: (open: boolean) => void;
+
   // Add expense modal
   addExpenseModalOpen: boolean;
   setAddExpenseModalOpen: (open: boolean) => void;
@@ -42,6 +46,9 @@ let toastIdCounter = 0;
 export const useUIStore = create<UIState>((set, get) => ({
   activeTripId: null,
   setActiveTripId: (id) => set({ activeTripId: id }),
+
+  sidebarOpen: false,
+  setSidebarOpen: (open) => set({ sidebarOpen: open }),
 
   addExpenseModalOpen: false,
   setAddExpenseModalOpen: (open) => set({ addExpenseModalOpen: open }),

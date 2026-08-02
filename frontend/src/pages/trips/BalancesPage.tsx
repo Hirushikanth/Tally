@@ -1,4 +1,5 @@
 import { useParams, Navigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useBalances } from '@/hooks/useLedger';
 import { useSuggestions } from '@/hooks/useSettlements';
 import { useTrip } from '@/hooks/useTrips';
@@ -70,10 +71,16 @@ export function BalancesPage() {
             </div>
           ) : (
             <div className="positions-list">
-              {balancesData?.balances.map((b) => {
+              {balancesData?.balances.map((b, idx) => {
                 const isMe = b.userId === user?.id;
                 return (
-                  <div key={b.memberId} className="position-card">
+                  <motion.div
+                    key={b.memberId}
+                    className="position-card"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.04, duration: 0.22, ease: 'easeOut' }}
+                  >
                     <div className="position-user">
                       <Avatar name={b.userName} size="md" />
                       <div>
@@ -90,7 +97,7 @@ export function BalancesPage() {
                       </div>
                       <MonoAmount value={b.balance} asBalance size="16px" />
                     </div>
-                  </div>
+                  </motion.div>
                 );
               })}
             </div>
@@ -123,7 +130,13 @@ export function BalancesPage() {
           ) : (
             <div className="suggestions-list">
               {suggestionsData?.suggestedSettlements.map((s, idx) => (
-                <div key={idx} className="suggestion-card">
+                <motion.div
+                  key={idx}
+                  className="suggestion-card"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.04, duration: 0.22, ease: 'easeOut' }}
+                >
                   <div className="suggestion-flow">
                     <div className="suggestion-person">
                       <Avatar name={s.fromMemberName} size="sm" />
@@ -148,7 +161,7 @@ export function BalancesPage() {
                   >
                     Record settlement
                   </Button>
-                </div>
+                </motion.div>
               ))}
             </div>
           )}

@@ -92,3 +92,33 @@
   color: var(--text-low);
   margin-top: 4px;
 }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 900px) {
+  .trips-list-page {
+    padding: 24px 20px 48px;
+  }
+
+  .trips-list-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .trips-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .trips-list-page {
+    padding: 18px 14px 40px;
+  }
+
+  .trips-grid {
+    grid-template-columns: 1fr;
+  }
+}

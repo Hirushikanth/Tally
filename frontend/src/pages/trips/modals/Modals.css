@@ -245,3 +245,41 @@
   color: var(--text-low);
   pointer-events: none;
 }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 560px) {
+  .payer-amount {
+    width: 108px;
+  }
+
+  .split-input-field {
+    width: 108px;
+  }
+
+  .payer-row {
+    flex-wrap: wrap;
+  }
+
+  .payer-toggle {
+    flex-basis: 100%;
+  }
+
+  .payer-amount {
+    width: 100%;
+  }
+
+  .split-input-row {
+    flex-wrap: wrap;
+  }
+
+  .split-input-name {
+    flex-basis: 100%;
+  }
+
+  .split-input-field {
+    width: 100%;
+  }
+}

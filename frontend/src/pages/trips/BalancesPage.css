@@ -156,3 +156,31 @@
   font-size: 12px;
   color: var(--gold-soft);
 }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 900px) {
+  .balances-page {
+    padding: 22px 20px 48px;
+  }
+
+  .balances-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .balances-page {
+    padding: 18px 14px 40px;
+  }
+
+  .balances-panel {
+    padding: 18px;
+  }
+
+  .position-card {
+    gap: 10px;
+  }
+}

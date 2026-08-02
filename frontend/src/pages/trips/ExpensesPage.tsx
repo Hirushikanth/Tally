@@ -93,35 +93,32 @@ export function ExpensesPage() {
         )}
       </GlassCard>
 
-      {addExpenseModalOpen && myMember && trip && (
-        <AddExpenseModal
-          tripId={tripId}
-          members={trip.members}
-          currency={trip.currency}
-          currentMemberId={myMember.id}
-          onClose={() => setAddExpenseModalOpen(false)}
-        />
-      )}
+      <AddExpenseModal
+        open={addExpenseModalOpen && !!myMember && !!trip}
+        tripId={tripId}
+        members={trip?.members ?? []}
+        currency={trip?.currency ?? 'LKR'}
+        currentMemberId={myMember?.id ?? ''}
+        onClose={() => setAddExpenseModalOpen(false)}
+      />
 
-      {addLoanModalOpen && myMember && trip && (
-        <AddLoanModal
-          tripId={tripId}
-          members={trip.members}
-          currency={trip.currency}
-          currentMemberId={myMember.id}
-          onClose={() => setAddLoanModalOpen(false)}
-        />
-      )}
+      <AddLoanModal
+        open={addLoanModalOpen && !!myMember && !!trip}
+        tripId={tripId}
+        members={trip?.members ?? []}
+        currency={trip?.currency ?? 'LKR'}
+        currentMemberId={myMember?.id ?? ''}
+        onClose={() => setAddLoanModalOpen(false)}
+      />
 
-      {addCashMovementModalOpen && myMember && trip && (
-        <AddCashMovementModal
-          tripId={tripId}
-          members={trip.members}
-          currency={trip.currency}
-          currentMemberId={myMember.id}
-          onClose={() => setAddCashMovementModalOpen(false)}
-        />
-      )}
+      <AddCashMovementModal
+        open={addCashMovementModalOpen && !!myMember && !!trip}
+        tripId={tripId}
+        members={trip?.members ?? []}
+        currency={trip?.currency ?? 'LKR'}
+        currentMemberId={myMember?.id ?? ''}
+        onClose={() => setAddCashMovementModalOpen(false)}
+      />
     </div>
   );
 }

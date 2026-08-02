@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useTrip } from '@/hooks/useTrips';
 import { useMemberLedger } from '@/hooks/useLedger';
 import { useAuthStore } from '@/store/auth.store';
@@ -102,8 +103,8 @@ export function LedgerPage() {
             </div>
           </div>
         ) : (
-          ledger.entries.map((entry) => (
-            <LedgerRow key={entry.postingId} entry={entry} />
+          ledger.entries.map((entry, idx) => (
+            <LedgerRow key={entry.postingId} entry={entry} index={idx} />
           ))
         )}
       </GlassCard>
@@ -111,12 +112,17 @@ export function LedgerPage() {
   );
 }
 
-function LedgerRow({ entry }: { entry: MemberLedgerEntry }) {
+function LedgerRow({ entry, index }: { entry: MemberLedgerEntry; index: number }) {
   const event = entry.businessEvent;
   const isCredit = entry.amount > 0;
 
   return (
-    <div className="ledger-row">
+    <motion.div
+      className="ledger-row"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.04, duration: 0.22, ease: 'easeOut' }}
+    >
       <div className="ledger-icon">{categoryIcon(event.category)}</div>
       <div className="ledger-main">
         <div className="ledger-row-title">
@@ -145,7 +151,7 @@ function LedgerRow({ entry }: { entry: MemberLedgerEntry }) {
           running {formatSigned(entry.runningBalance)}
         </span>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

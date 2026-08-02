@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -6,6 +7,7 @@ import { useTrips, useCreateTrip } from '@/hooks/useTrips';
 import { useUIStore } from '@/store/ui.store';
 import { Button } from '@/components/common/Button';
 import { GlassCard } from '@/components/common/GlassCard';
+import { Modal } from '@/components/common/Modal';
 import { formatDate } from '@/lib/utils';
 import type { Trip } from '@/api/types';
 import './TripsListPage.css';
@@ -85,10 +87,11 @@ export function TripsListPage() {
             <section className="trips-section">
               <div className="trips-section-label">Active trips</div>
               <div className="trips-grid">
-                {activeTrips.map((trip) => (
+                {activeTrips.map((trip, idx) => (
                   <TripCard
                     key={trip.id}
                     trip={trip}
+                    index={idx}
                     onClick={() => navigate(`/trips/${trip.id}`)}
                   />
                 ))}
@@ -99,10 +102,11 @@ export function TripsListPage() {
             <section className="trips-section">
               <div className="trips-section-label">Archived</div>
               <div className="trips-grid">
-                {archivedTrips.map((trip) => (
+                {archivedTrips.map((trip, idx) => (
                   <TripCard
                     key={trip.id}
                     trip={trip}
+                    index={idx}
                     onClick={() => navigate(`/trips/${trip.id}`)}
                   />
                 ))}
@@ -113,18 +117,16 @@ export function TripsListPage() {
       )}
 
       {/* New trip modal */}
-      {newTripModalOpen && (
-        <div className="modal-overlay" onClick={() => setNewTripModalOpen(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2 className="modal-title">New trip</h2>
-              <button
-                className="modal-close"
-                onClick={() => setNewTripModalOpen(false)}
-              >
-                ✕
-              </button>
-            </div>
+      <Modal open={newTripModalOpen} onClose={() => setNewTripModalOpen(false)}>
+        <div className="modal-header">
+          <h2 className="modal-title">New trip</h2>
+          <button
+            className="modal-close"
+            onClick={() => setNewTripModalOpen(false)}
+          >
+            ✕
+          </button>
+        </div>
             <form
               style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
               onSubmit={handleSubmit(onCreateTrip)}
@@ -195,36 +197,48 @@ export function TripsListPage() {
                 </Button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
     </div>
   );
 }
 
-function TripCard({ trip, onClick }: { trip: Trip; onClick: () => void }) {
+function TripCard({
+  trip,
+  index,
+  onClick,
+}: {
+  trip: Trip;
+  index: number;
+  onClick: () => void;
+}) {
   const memberCount = trip.members.length;
   const eventCount = trip._count?.businessEvents ?? 0;
 
   return (
-    <GlassCard className="trip-card" onClick={onClick}>
-      <div className="trip-card-status">
-        <span className={`badge ${trip.status === 'ACTIVE' ? 'badge-green' : ''}`}>
-          {trip.status === 'ACTIVE' ? 'Active' : trip.status === 'ARCHIVED' ? 'Archived' : 'Settled'}
-        </span>
-        <span className="trip-card-currency badge">{trip.currency}</span>
-      </div>
-      <h3 className="trip-card-name">{trip.name}</h3>
-      {trip.description && (
-        <p className="trip-card-desc">{trip.description}</p>
-      )}
-      <div className="trip-card-meta">
-        <span>{memberCount} traveler{memberCount !== 1 ? 's' : ''}</span>
-        <span>·</span>
-        <span>{eventCount} expense{eventCount !== 1 ? 's' : ''}</span>
-        <span>·</span>
-        <span>{formatDate(trip.createdAt)}</span>
-      </div>
-    </GlassCard>
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05, duration: 0.24, ease: 'easeOut' }}
+    >
+      <GlassCard className="trip-card" onClick={onClick}>
+        <div className="trip-card-status">
+          <span className={`badge ${trip.status === 'ACTIVE' ? 'badge-green' : ''}`}>
+            {trip.status === 'ACTIVE' ? 'Active' : trip.status === 'ARCHIVED' ? 'Archived' : 'Settled'}
+          </span>
+          <span className="trip-card-currency badge">{trip.currency}</span>
+        </div>
+        <h3 className="trip-card-name">{trip.name}</h3>
+        {trip.description && (
+          <p className="trip-card-desc">{trip.description}</p>
+        )}
+        <div className="trip-card-meta">
+          <span>{memberCount} traveler{memberCount !== 1 ? 's' : ''}</span>
+          <span>·</span>
+          <span>{eventCount} expense{eventCount !== 1 ? 's' : ''}</span>
+          <span>·</span>
+          <span>{formatDate(trip.createdAt)}</span>
+        </div>
+      </GlassCard>
+    </motion.div>
   );
 }

@@ -466,7 +466,6 @@ select {
   align-items: center;
   justify-content: center;
   padding: var(--space-4);
-  animation: fade-in 0.2s ease;
 }
 
 .modal {
@@ -478,7 +477,6 @@ select {
   max-width: 520px;
   max-height: 90vh;
   overflow-y: auto;
-  animation: slide-up 0.25s ease;
 }
 
 .modal-header {
@@ -512,26 +510,6 @@ select {
 .modal-close:hover {
   color: var(--text-hi);
   background: var(--bg-card-hover);
-}
-
-@keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 /* ============================================================
@@ -634,7 +612,6 @@ select {
   align-items: center;
   gap: var(--space-3);
   min-width: 260px;
-  animation: slide-up 0.2s ease;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
@@ -644,4 +621,62 @@ select {
 
 .toast.error {
   border-color: rgba(224, 133, 133, 0.25);
+}
+
+/* ============================================================
+   RESPONSIVE (global)
+   ============================================================ */
+
+@media (max-width: 900px) {
+  .modal {
+    padding: var(--space-6);
+  }
+
+  .toast-container {
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    align-items: stretch;
+  }
+
+  .toast {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modal {
+    max-width: none;
+    max-height: 92vh;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    padding: var(--space-6) var(--space-5);
+  }
+
+  .auth-page {
+    padding: 16px;
+  }
+
+  .auth-card {
+    padding: 28px 24px;
+  }
+}
+
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useCreateLoan } from '@/hooks/useEvents';
 import { useUIStore } from '@/store/ui.store';
 import { Button } from '@/components/common/Button';
+import { Modal } from '@/components/common/Modal';
 import type { TripMember } from '@/api/types';
 import './Modals.css';
 
@@ -24,6 +25,7 @@ const schema = z
 type FormData = z.infer<typeof schema>;
 
 interface Props {
+  open: boolean;
   tripId: string;
   members: TripMember[];
   currency: string;
@@ -31,7 +33,7 @@ interface Props {
   onClose: () => void;
 }
 
-export function AddLoanModal({ tripId, members, currency, currentMemberId, onClose }: Props) {
+export function AddLoanModal({ open, tripId, members, currency, currentMemberId, onClose }: Props) {
   const createLoan = useCreateLoan(tripId);
   const addToast = useUIStore((s) => s.addToast);
 
@@ -65,9 +67,8 @@ export function AddLoanModal({ tripId, members, currency, currentMemberId, onClo
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
+    <Modal open={open} onClose={onClose}>
+      <div className="modal-header">
           <h2 className="modal-title">Record a loan</h2>
           <button className="modal-close" onClick={onClose}>
             ✕
@@ -159,7 +160,6 @@ export function AddLoanModal({ tripId, members, currency, currentMemberId, onClo
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }
