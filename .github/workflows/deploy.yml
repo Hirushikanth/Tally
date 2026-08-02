@@ -24,13 +24,14 @@ concurrency:
 
 jobs:
   deploy:
+    # Skip (not fail) until the production secrets are configured.
+    if: ${{ secrets.RENDER_API_KEY != '' && secrets.RENDER_SERVICE_ID != '' && secrets.DATABASE_URL_OWNER != '' && secrets.API_URL != '' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
+        # No `version` key: the packageManager field in package.json pins pnpm.
 
       - uses: actions/setup-node@v4
         with:
