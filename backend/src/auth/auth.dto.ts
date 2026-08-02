@@ -5,13 +5,15 @@ import { normalizeEmail } from './auth.service';
 export class RegisterDto {
   @IsString()
   @IsNotEmpty()
-  @Transform(({ value }) =>
+  @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,
   )
   name: string;
 
   @IsEmail()
-  @Transform(({ value }) => normalizeEmail(value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? normalizeEmail(value) : value,
+  )
   email: string;
 
   @IsString()
@@ -21,7 +23,9 @@ export class RegisterDto {
 
 export class LoginDto {
   @IsEmail()
-  @Transform(({ value }) => normalizeEmail(value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? normalizeEmail(value) : value,
+  )
   email: string;
 
   @IsString()

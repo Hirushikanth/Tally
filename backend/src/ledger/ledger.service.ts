@@ -115,11 +115,13 @@ export class LedgerService {
     tripId: string,
     memberId: string,
     query: PaginationQueryDto = {},
-  ): Promise<Paginated<MemberLedgerEntryDto> & {
-    memberId: string;
-    userName: string;
-    currentBalance: number;
-  }> {
+  ): Promise<
+    Paginated<MemberLedgerEntryDto> & {
+      memberId: string;
+      userName: string;
+      currentBalance: number;
+    }
+  > {
     const member = await this.prisma.member.findFirst({
       where: { id: memberId, tripId },
       include: {

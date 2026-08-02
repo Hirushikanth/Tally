@@ -10,9 +10,11 @@ export interface Paginated<T> {
 }
 
 /** Resolve page/pageSize from a query DTO, silently capping pageSize at PAGE_SIZE_MAX. */
-export function resolvePagination(
-  query: PaginationQueryDto,
-): { page: number; pageSize: number; skip: number } {
+export function resolvePagination(query: PaginationQueryDto): {
+  page: number;
+  pageSize: number;
+  skip: number;
+} {
   const page = query.page ?? DEFAULT_PAGE;
   const pageSize = Math.min(query.pageSize ?? DEFAULT_PAGE_SIZE, PAGE_SIZE_MAX);
   return { page, pageSize, skip: (page - 1) * pageSize };

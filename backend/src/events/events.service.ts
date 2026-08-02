@@ -5,10 +5,7 @@ import {
 } from '@nestjs/common';
 import { BusinessEventType } from '@prisma/client';
 import { PrismaService } from '../common/prisma/prisma.service';
-import {
-  resolvePagination,
-  paginate,
-} from '../common/pagination/paginate';
+import { resolvePagination, paginate } from '../common/pagination/paginate';
 import { PaginationQueryDto } from '../common/pagination/pagination.dto';
 import { EventsRepository } from './events.repository';
 import {

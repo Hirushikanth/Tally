@@ -83,9 +83,7 @@ export class EqualSplitDto {
 }
 
 @ValidatorConstraint({ name: 'percentageSharesSumTo100', async: false })
-class PercentageSharesSumTo100Constraint
-  implements ValidatorConstraintInterface
-{
+class PercentageSharesSumTo100Constraint implements ValidatorConstraintInterface {
   validate(shares: PercentageShareDto[]): boolean {
     if (!Array.isArray(shares)) {
       return false;
@@ -134,10 +132,7 @@ export class WeightSplitDto {
 }
 
 export type SplitDto =
-  | EqualSplitDto
-  | PercentageSplitDto
-  | ExactSplitDto
-  | WeightSplitDto;
+  EqualSplitDto | PercentageSplitDto | ExactSplitDto | WeightSplitDto;
 
 @ValidatorConstraint({ name: 'splitMethodKnown', async: false })
 class SplitMethodKnownConstraint implements ValidatorConstraintInterface {
