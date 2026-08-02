@@ -7,6 +7,7 @@ import { authApi } from '@/api/auth';
 import { useAuthStore } from '@/store/auth.store';
 import { Button } from '@/components/common/Button';
 import { Stars } from '@/components/Stars';
+import { getApiErrorMessage } from '@/api/errors';
 import './AuthPages.css';
 
 const loginSchema = z.object({
@@ -38,10 +39,8 @@ export function LoginPage() {
       const response = await authApi.login(data);
       login(response);
       navigate('/trips');
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })
-        ?.response?.data?.message;
-      setServerError(msg ?? 'Invalid email or password');
+    } catch (err) {
+      setServerError(getApiErrorMessage(err, 'Invalid email or password'));
     }
   };
 

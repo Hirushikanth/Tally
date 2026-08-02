@@ -7,6 +7,7 @@ import { useAuthStore } from '@/store/auth.store';
 import { GlassCard } from '@/components/common/GlassCard';
 import { Avatar } from '@/components/common/Avatar';
 import { MonoAmount } from '@/components/common/MonoAmount';
+import { QueryErrorState } from '@/components/common/QueryErrorState';
 import { formatDate, eventTypeLabel, categoryIcon } from '@/lib/utils';
 import type { MemberLedgerEntry } from '@/api/types';
 import './LedgerPage.css';
@@ -25,7 +26,7 @@ export function LedgerPage() {
     trip?.members[0]?.id ??
     null;
 
-  const { data: ledger, isLoading } = useMemberLedger(tripId ?? '', activeMemberId ?? '');
+  const { data: ledger, isLoading, isError, refetch } = useMemberLedger(tripId ?? '', activeMemberId ?? '');
 
   if (!tripId) return <Navigate to="/trips" replace />;
 
@@ -92,6 +93,11 @@ export function LedgerPage() {
           <div style={{ padding: 40, display: 'flex', justifyContent: 'center' }}>
             <div className="spinner" />
           </div>
+        ) : isError ? (
+          <QueryErrorState
+            message="We could not load this member's ledger."
+            onRetry={() => refetch()}
+          />
         ) : !ledger || ledger.items.length === 0 ? (
           <div className="empty-state" style={{ padding: '60px 0' }}>
             <div className="empty-state-icon">🪙</div>

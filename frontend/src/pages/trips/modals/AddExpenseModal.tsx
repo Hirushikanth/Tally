@@ -7,6 +7,7 @@ import { useUIStore } from '@/store/ui.store';
 import { Button } from '@/components/common/Button';
 import { Modal } from '@/components/common/Modal';
 import { Avatar } from '@/components/common/Avatar';
+import { getApiErrorMessage } from '@/api/errors';
 import { formatAmount } from '@/lib/utils';
 import type { SplitDto, SplitMethod, TripMember } from '@/api/types';
 import './Modals.css';
@@ -239,10 +240,11 @@ export function AddExpenseModal({
       });
       addToast({ message: 'Expense added!', type: 'success' });
       onClose();
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })
-        ?.response?.data?.message;
-      addToast({ message: msg ?? 'Failed to add expense', type: 'error' });
+    } catch (err) {
+      addToast({
+        message: getApiErrorMessage(err, 'Failed to add expense'),
+        type: 'error',
+      });
     }
   };
 

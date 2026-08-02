@@ -8,6 +8,8 @@ import { useUIStore } from '@/store/ui.store';
 import { Button } from '@/components/common/Button';
 import { GlassCard } from '@/components/common/GlassCard';
 import { Modal } from '@/components/common/Modal';
+import { QueryErrorState } from '@/components/common/QueryErrorState';
+import { getApiErrorMessage } from '@/api/errors';
 import { formatDate } from '@/lib/utils';
 import type { Trip } from '@/api/types';
 import './TripsListPage.css';
@@ -22,7 +24,7 @@ type NewTripForm = z.infer<typeof newTripSchema>;
 
 export function TripsListPage() {
   const navigate = useNavigate();
-  const { data: trips, isLoading } = useTrips();
+  const { data: trips, isLoading, isError, refetch } = useTrips();
   const createTrip = useCreateTrip();
   const newTripModalOpen = useUIStore((s) => s.newTripModalOpen);
   const setNewTripModalOpen = useUIStore((s) => s.setNewTripModalOpen);
@@ -46,8 +48,11 @@ export function TripsListPage() {
       setNewTripModalOpen(false);
       addToast({ message: `Trip "${trip.name}" created!`, type: 'success' });
       navigate(`/trips/${trip.id}`);
-    } catch {
-      addToast({ message: 'Failed to create trip', type: 'error' });
+    } catch (err) {
+      addToast({
+        message: getApiErrorMessage(err, 'Failed to create trip'),
+        type: 'error',
+      });
     }
   };
 
@@ -70,6 +75,11 @@ export function TripsListPage() {
         <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 0' }}>
           <div className="spinner spinner-lg" />
         </div>
+      ) : isError ? (
+        <QueryErrorState
+          message="We could not load your trips. Check your connection and try again."
+          onRetry={() => refetch()}
+        />
       ) : activeTrips.length === 0 && archivedTrips.length === 0 ? (
         <div className="empty-state glass" style={{ margin: '40px 0', borderRadius: 16, padding: '80px 40px' }}>
           <div className="empty-state-icon">🗺️</div>

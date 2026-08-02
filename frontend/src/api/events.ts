@@ -61,9 +61,4 @@ export const eventsApi = {
     );
     return data;
   },
-
-  getEventById: async (tripId: string, eventId: string): Promise<BusinessEvent> => {
-    const { data } = await apiClient.get<BusinessEvent>(`/trips/${tripId}/events/${eventId}`);
-    return data;
-  },
 };

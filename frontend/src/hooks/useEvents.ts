@@ -12,7 +12,6 @@ export const eventKeys = {
   list: (tripId: string, page = 1, pageSize = DEFAULT_PAGE_SIZE) =>
     ['trips', tripId, 'events', page, pageSize] as const,
   infinite: (tripId: string) => ['trips', tripId, 'events', 'infinite'] as const,
-  detail: (tripId: string, eventId: string) => ['trips', tripId, 'events', eventId] as const,
 };
 
 /** First page of events — used by the dashboard summary. */
@@ -34,14 +33,6 @@ export function useInfiniteEvents(tripId: string | null) {
     getNextPageParam: (lastPage) =>
       lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined,
     enabled: Boolean(tripId),
-  });
-}
-
-export function useEvent(tripId: string, eventId: string) {
-  return useQuery({
-    queryKey: eventKeys.detail(tripId, eventId),
-    queryFn: () => eventsApi.getEventById(tripId, eventId),
-    enabled: Boolean(tripId) && Boolean(eventId),
   });
 }
 

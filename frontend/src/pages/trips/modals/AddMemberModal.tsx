@@ -5,6 +5,7 @@ import { useAddMember } from '@/hooks/useMembers';
 import { useUIStore } from '@/store/ui.store';
 import { Button } from '@/components/common/Button';
 import { Modal } from '@/components/common/Modal';
+import { getApiErrorMessage } from '@/api/errors';
 import './Modals.css';
 
 const schema = z.object({
@@ -38,10 +39,11 @@ export function AddMemberModal({ open, tripId, onClose }: Props) {
       await addMember.mutateAsync({ email: data.email, role: data.role });
       addToast({ message: `${data.email} added to trip!`, type: 'success' });
       onClose();
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })
-        ?.response?.data?.message;
-      addToast({ message: msg ?? 'Could not add member', type: 'error' });
+    } catch (err) {
+      addToast({
+        message: getApiErrorMessage(err, 'Could not add member'),
+        type: 'error',
+      });
     }
   };
 

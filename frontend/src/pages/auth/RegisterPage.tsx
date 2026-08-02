@@ -7,6 +7,7 @@ import { authApi } from '@/api/auth';
 import { useAuthStore } from '@/store/auth.store';
 import { Button } from '@/components/common/Button';
 import { Stars } from '@/components/Stars';
+import { getApiErrorMessage } from '@/api/errors';
 import './AuthPages.css';
 
 const registerSchema = z.object({
@@ -39,10 +40,10 @@ export function RegisterPage() {
       const response = await authApi.register(data);
       login(response);
       navigate('/trips');
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })
-        ?.response?.data?.message;
-      setServerError(msg ?? 'Registration failed. Please try again.');
+    } catch (err) {
+      setServerError(
+        getApiErrorMessage(err, 'Registration failed. Please try again.'),
+      );
     }
   };
 

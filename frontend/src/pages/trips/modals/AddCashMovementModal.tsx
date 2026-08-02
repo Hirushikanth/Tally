@@ -6,6 +6,7 @@ import { useCreateCashMovement } from '@/hooks/useEvents';
 import { useUIStore } from '@/store/ui.store';
 import { Button } from '@/components/common/Button';
 import { Modal } from '@/components/common/Modal';
+import { getApiErrorMessage } from '@/api/errors';
 import type { TripMember } from '@/api/types';
 import './Modals.css';
 
@@ -72,10 +73,11 @@ export function AddCashMovementModal({
         type: 'success',
       });
       onClose();
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })
-        ?.response?.data?.message;
-      addToast({ message: msg ?? 'Failed to record payment', type: 'error' });
+    } catch (err) {
+      addToast({
+        message: getApiErrorMessage(err, 'Failed to record payment'),
+        type: 'error',
+      });
     }
   };
 

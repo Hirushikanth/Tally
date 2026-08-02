@@ -10,6 +10,8 @@ import { GlassCard } from '@/components/common/GlassCard';
 import { Avatar } from '@/components/common/Avatar';
 import { MonoAmount } from '@/components/common/MonoAmount';
 import { Button } from '@/components/common/Button';
+import { QueryErrorState } from '@/components/common/QueryErrorState';
+import { getApiErrorMessage } from '@/api/errors';
 import { formatAmount } from '@/lib/utils';
 import type { SuggestedSettlement } from '@/api/types';
 import './BalancesPage.css';
@@ -20,8 +22,8 @@ export function BalancesPage() {
   const addToast = useUIStore((s) => s.addToast);
 
   const { data: trip } = useTrip(tripId ?? null);
-  const { data: balancesData, isLoading: balancesLoading } = useBalances(tripId ?? null);
-  const { data: suggestionsData, isLoading: suggestionsLoading } = useSuggestions(tripId ?? null);
+  const { data: balancesData, isLoading: balancesLoading, isError: balancesError, refetch: refetchBalances } = useBalances(tripId ?? null);
+  const { data: suggestionsData, isLoading: suggestionsLoading, isError: suggestionsError, refetch: refetchSuggestions } = useSuggestions(tripId ?? null);
   const createCashMovement = useCreateCashMovement(tripId ?? '');
 
   if (!tripId) return <Navigate to="/trips" replace />;
@@ -41,8 +43,11 @@ export function BalancesPage() {
         message: `Recorded settlement of ${formatAmount(s.amount, currency)}`,
         type: 'success',
       });
-    } catch {
-      addToast({ message: 'Failed to record settlement', type: 'error' });
+    } catch (err) {
+      addToast({
+        message: getApiErrorMessage(err, 'Failed to record settlement'),
+        type: 'error',
+      });
     }
   };
 
@@ -69,6 +74,11 @@ export function BalancesPage() {
             <div style={{ padding: 40, display: 'flex', justifyContent: 'center' }}>
               <div className="spinner" />
             </div>
+          ) : balancesError ? (
+            <QueryErrorState
+              message="We could not load member balances."
+              onRetry={() => refetchBalances()}
+            />
           ) : (
             <div className="positions-list">
               {balancesData?.balances.map((b, idx) => {
@@ -119,6 +129,11 @@ export function BalancesPage() {
             <div style={{ padding: 40, display: 'flex', justifyContent: 'center' }}>
               <div className="spinner" />
             </div>
+          ) : suggestionsError ? (
+            <QueryErrorState
+              message="We could not load settlement suggestions."
+              onRetry={() => refetchSuggestions()}
+            />
           ) : suggestionsData?.suggestedSettlements.length === 0 ? (
             <div className="empty-state" style={{ padding: '40px 0' }}>
               <div className="empty-state-icon">🎉</div>

@@ -2,7 +2,6 @@ import { apiClient } from './client';
 import type {
   MemberLedgerEntry,
   MemberLedgerResponse,
-  Paginated,
   PaginationParams,
   TripBalancesResponse,
 } from './types';
@@ -38,18 +37,5 @@ export const ledgerApi = {
         entryId: entry.postingId,
       })),
     };
-  },
-
-  getTripLedger: async (
-    tripId: string,
-    params: PaginationParams = {},
-  ): Promise<Paginated<unknown>> => {
-    const { data } = await apiClient.get(`/trips/${tripId}/ledger`, { params });
-    return data;
-  },
-
-  rebuildSnapshots: async (tripId: string) => {
-    const { data } = await apiClient.post(`/trips/${tripId}/ledger/rebuild-snapshots`);
-    return data;
   },
 };

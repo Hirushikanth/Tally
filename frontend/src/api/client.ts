@@ -1,10 +1,10 @@
-import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosError } from 'axios';
 import { useAuthStore } from '@/store/auth.store';
 import { authApi } from './auth';
 
 // Axios instance pointing at Vite dev proxy or direct backend
 export const apiClient = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_URL ?? '/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -36,12 +36,8 @@ function refreshAccessToken(): Promise<string | null> {
         return null;
       }
       try {
-        // Bypass interceptors: /auth/refresh must not itself trigger refresh
-        const { data } = await axios.post<{
-          accessToken: string;
-          refreshToken: string;
-          user: { id: string; name: string; email: string };
-        }>('/api/auth/refresh', { refreshToken });
+        // /auth/refresh is in AUTH_EXEMPT_URLS, so this can't loop
+        const data = await authApi.refresh(refreshToken);
         useAuthStore.getState().setAuth(data);
         return data.accessToken;
       } catch {

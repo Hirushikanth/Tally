@@ -4,6 +4,7 @@ import { useTrip } from '@/hooks/useTrips';
 import { MonoAmount } from '@/components/common/MonoAmount';
 import { GlassCard } from '@/components/common/GlassCard';
 import { Button } from '@/components/common/Button';
+import { QueryErrorState } from '@/components/common/QueryErrorState';
 import { useUIStore } from '@/store/ui.store';
 import { categoryIcon, eventTypeLabel, formatDate } from '@/lib/utils';
 import { AddExpenseModal } from './modals/AddExpenseModal';
@@ -19,9 +20,11 @@ export function ExpensesPage() {
   const {
     data: eventsData,
     isLoading,
+    isError,
     isFetchingNextPage,
     hasNextPage,
     fetchNextPage,
+    refetch,
   } = useInfiniteEvents(tripId ?? null);
   const addExpenseModalOpen = useUIStore((s) => s.addExpenseModalOpen);
   const setAddExpenseModalOpen = useUIStore((s) => s.setAddExpenseModalOpen);
@@ -64,6 +67,11 @@ export function ExpensesPage() {
           <div style={{ padding: 40, display: 'flex', justifyContent: 'center' }}>
             <div className="spinner" />
           </div>
+        ) : isError ? (
+          <QueryErrorState
+            message="We could not load expenses for this trip."
+            onRetry={() => refetch()}
+          />
         ) : sortedEvents.length === 0 ? (
           <div className="empty-state" style={{ padding: '60px 0' }}>
             <div className="empty-state-icon">🧾</div>

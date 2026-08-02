@@ -5,6 +5,7 @@ import { useCreateLoan } from '@/hooks/useEvents';
 import { useUIStore } from '@/store/ui.store';
 import { Button } from '@/components/common/Button';
 import { Modal } from '@/components/common/Modal';
+import { getApiErrorMessage } from '@/api/errors';
 import type { TripMember } from '@/api/types';
 import './Modals.css';
 
@@ -59,10 +60,11 @@ export function AddLoanModal({ open, tripId, members, currency, currentMemberId,
       });
       addToast({ message: 'Loan recorded!', type: 'success' });
       onClose();
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })
-        ?.response?.data?.message;
-      addToast({ message: msg ?? 'Failed to record loan', type: 'error' });
+    } catch (err) {
+      addToast({
+        message: getApiErrorMessage(err, 'Failed to record loan'),
+        type: 'error',
+      });
     }
   };
 

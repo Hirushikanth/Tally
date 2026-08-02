@@ -9,6 +9,7 @@ import { Button } from '@/components/common/Button';
 import { GlassCard } from '@/components/common/GlassCard';
 import { Avatar } from '@/components/common/Avatar';
 import { MonoAmount } from '@/components/common/MonoAmount';
+import { QueryErrorState } from '@/components/common/QueryErrorState';
 import { AddExpenseModal } from './modals/AddExpenseModal';
 import { AddLoanModal } from './modals/AddLoanModal';
 import { AddCashMovementModal } from './modals/AddCashMovementModal';
@@ -29,9 +30,9 @@ export function TripDashboardPage() {
   const addCashMovementModalOpen = useUIStore((s) => s.addCashMovementModalOpen);
   const addMemberModalOpen = useUIStore((s) => s.addMemberModalOpen);
 
-  const { data: trip, isLoading: tripLoading } = useTrip(tripId ?? null);
-  const { data: events, isLoading: eventsLoading } = useEvents(tripId ?? null);
-  const { data: balancesData } = useBalances(tripId ?? null);
+  const { data: trip, isLoading: tripLoading, isError: tripError, refetch: refetchTrip } = useTrip(tripId ?? null);
+  const { data: events, isLoading: eventsLoading, isError: eventsError, refetch: refetchEvents } = useEvents(tripId ?? null);
+  const { data: balancesData, isError: balancesError, refetch: refetchBalances } = useBalances(tripId ?? null);
 
   if (!tripId) return <Navigate to="/trips" replace />;
 
@@ -43,8 +44,13 @@ export function TripDashboardPage() {
     );
   }
 
-  if (!trip) {
-    return <Navigate to="/trips" replace />;
+  if (tripError || !trip) {
+    return (
+      <QueryErrorState
+        message="We could not load this trip."
+        onRetry={() => refetchTrip()}
+      />
+    );
   }
 
   // Find the current user's member record
@@ -140,6 +146,11 @@ export function TripDashboardPage() {
             <div style={{ padding: '32px 0', display: 'flex', justifyContent: 'center' }}>
               <div className="spinner" />
             </div>
+          ) : eventsError ? (
+            <QueryErrorState
+              message="We could not load recent expenses."
+              onRetry={() => refetchEvents()}
+            />
           ) : recentEvents.length === 0 ? (
             <div className="empty-state" style={{ padding: '40px 0' }}>
               <div className="empty-state-icon">🧾</div>
@@ -191,10 +202,15 @@ export function TripDashboardPage() {
             <div className="panel-header">
               <h3 className="panel-title">Balances</h3>
             </div>
-            {balancesData?.balances.map((b, idx) => (
+            {balancesError ? (
+              <QueryErrorState
+                message="We could not load balances."
+                onRetry={() => refetchBalances()}
+              />
+            ) : balancesData?.balances.map((b, idx) => (
               <BalanceRow key={b.memberId} balance={b} currentUserId={user?.id} index={idx} />
             ))}
-            {(!balancesData || balancesData.balances.length === 0) && (
+            {(!balancesError && (!balancesData || balancesData.balances.length === 0)) && (
               <p style={{ color: 'var(--text-low)', fontSize: 13, padding: '8px 0' }}>
                 No balances yet
               </p>

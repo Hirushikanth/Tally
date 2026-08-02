@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 const LoginPage = lazy(() =>
   import('@/pages/auth/LoginPage').then((m) => ({ default: m.LoginPage })),
@@ -43,7 +44,8 @@ function PageFallback() {
 
 export function App() {
   return (
-    <Suspense fallback={<PageFallback />}>
+    <ErrorBoundary>
+      <Suspense fallback={<PageFallback />}>
       <Routes>
         {/* Auth routes */}
         <Route path="/login" element={<LoginPage />} />
@@ -62,7 +64,8 @@ export function App() {
         {/* Default redirect */}
         <Route path="*" element={<Navigate to="/trips" replace />} />
       </Routes>
-    </Suspense>
+      </Suspense>
+    </ErrorBoundary>
   );
 }
 
