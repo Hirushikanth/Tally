@@ -145,12 +145,12 @@ export interface CreateRefundDto {
 
 export interface CreateAdjustmentDto {
   amount: number;
-  postings: { memberId: string; amount: number }[];
+  allocations: { memberId: string; amount: number }[];
   category?: string;
   notes?: string;
 }
 
-export interface BusinessEventPosting {
+export interface EventAllocation {
   id: string;
   memberId: string;
   amount: number;
@@ -171,7 +171,7 @@ export interface BusinessEvent {
   createdAt: string;
   refundOfId: string | null;
   createdBy?: TripUser;
-  postings?: BusinessEventPosting[];
+  allocations?: EventAllocation[];
 }
 
 // --- Ledger ---
@@ -192,7 +192,7 @@ export interface TripBalancesResponse {
 }
 
 export interface MemberLedgerEntry {
-  postingId: string;
+  entryId: string;
   amount: number;
   createdAt: string;
   runningBalance: number;

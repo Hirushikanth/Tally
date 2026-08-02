@@ -482,9 +482,8 @@ describe('ACCOUNTING §3.9 checklist', () => {
   });
 
   describe('3. append-only enforcement', () => {
-    it.skip('enforced at database level in Phase 2', () => {
-      // Pure posting engine has no persistence layer.
-    });
+    // Covered at the database level by tests/events.repository.integration-spec.ts:
+    // UPDATE/DELETE on BusinessEvent and Posting are rejected by Postgres triggers.
   });
 
   describe('4. refund requires source postings', () => {

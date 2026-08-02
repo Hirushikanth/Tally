@@ -104,7 +104,7 @@ export function LedgerPage() {
           </div>
         ) : (
           ledger.entries.map((entry, idx) => (
-            <LedgerRow key={entry.postingId} entry={entry} index={idx} />
+            <LedgerRow key={entry.entryId} entry={entry} index={idx} />
           ))
         )}
       </GlassCard>
@@ -114,7 +114,7 @@ export function LedgerPage() {
 
 function LedgerRow({ entry, index }: { entry: MemberLedgerEntry; index: number }) {
   const event = entry.businessEvent;
-  const isCredit = entry.amount > 0;
+  const isInflow = entry.amount > 0;
 
   return (
     <motion.div
@@ -147,7 +147,7 @@ function LedgerRow({ entry, index }: { entry: MemberLedgerEntry; index: number }
           className="ledger-row-amount"
           size="14px"
         />
-        <span className={`ledger-running ${isCredit ? 'positive' : 'negative'}`}>
+        <span className={`ledger-running ${isInflow ? 'positive' : 'negative'}`}>
           running {formatSigned(entry.runningBalance)}
         </span>
       </div>

@@ -1,5 +1,10 @@
 import { apiClient } from './client';
-import type { MemberLedgerResponse, TripBalancesResponse } from './types';
+import type { MemberLedgerEntry, MemberLedgerResponse, TripBalancesResponse } from './types';
+
+// Raw server shape: API entry id key is mapped to the UI-neutral entryId
+type RawMemberLedgerResponse = Omit<MemberLedgerResponse, 'entries'> & {
+  entries: Array<Omit<MemberLedgerEntry, 'entryId'> & { postingId: string }>;
+};
 
 export const ledgerApi = {
   getBalances: async (tripId: string): Promise<TripBalancesResponse> => {
@@ -13,10 +18,17 @@ export const ledgerApi = {
     tripId: string,
     memberId: string,
   ): Promise<MemberLedgerResponse> => {
-    const { data } = await apiClient.get<MemberLedgerResponse>(
+    const { data } = await apiClient.get<RawMemberLedgerResponse>(
       `/trips/${tripId}/ledger/members/${memberId}`,
     );
-    return data;
+    // Map the API entry id to the UI-neutral entryId
+    return {
+      ...data,
+      entries: data.entries.map((entry) => ({
+        ...entry,
+        entryId: entry.postingId,
+      })),
+    };
   },
 
   getTripLedger: async (tripId: string) => {

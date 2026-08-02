@@ -25,6 +25,7 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://test:test@localhost:5432/tally_test
+      JWT_SECRET: ci-test-secret
 
     steps:
       - uses: actions/checkout@v4
@@ -45,5 +46,7 @@ jobs:
       - run: pnpm --filter backend exec prisma migrate deploy
 
       - run: pnpm lint
+
+      - run: pnpm --filter frontend build
 
       - run: pnpm test

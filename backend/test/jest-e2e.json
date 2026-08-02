@@ -1,9 +1,13 @@
 {
   "moduleFileExtensions": ["js", "json", "ts"],
-  "rootDir": ".",
-  "testEnvironment": "node",
-  "testRegex": ".e2e-spec.ts$",
+  "rootDir": "..",
+  "testMatch": [
+    "<rootDir>/tests/*.e2e-spec.ts",
+    "<rootDir>/test/*.e2e-spec.ts"
+  ],
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
-  }
+  },
+  "testEnvironment": "node",
+  "maxWorkers": 1
 }

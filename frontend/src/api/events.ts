@@ -44,7 +44,7 @@ export const eventsApi = {
   createAdjustment: async (tripId: string, dto: CreateAdjustmentDto): Promise<BusinessEvent> => {
     const { data } = await apiClient.post<BusinessEvent>(
       `/trips/${tripId}/events/adjustment`,
-      dto,
+      { ...dto, postings: dto.allocations },
     );
     return data;
   },
