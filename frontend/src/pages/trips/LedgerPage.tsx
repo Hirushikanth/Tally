@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Navigate } from 'react-router-dom';
+import { useParams, Navigate } from 'react-router';
 import { useTrip } from '@/hooks/useTrips';
 import { useMemberLedger } from '@/hooks/useLedger';
 import { useAuthStore } from '@/store/auth.store';

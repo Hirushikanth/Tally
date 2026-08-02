@@ -1,4 +1,4 @@
-import { NavLink, useNavigate, useParams } from 'react-router-dom';
+import { NavLink, useNavigate, useParams } from 'react-router';
 import { useTrips } from '@/hooks/useTrips';
 import { authApi } from '@/api/auth';
 import { useAuthStore } from '@/store/auth.store';

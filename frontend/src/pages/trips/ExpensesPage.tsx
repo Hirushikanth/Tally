@@ -1,4 +1,4 @@
-import { useParams, Navigate } from 'react-router-dom';
+import { useParams, Navigate } from 'react-router';
 import { useInfiniteEvents } from '@/hooks/useEvents';
 import { useTrip } from '@/hooks/useTrips';
 import { MonoAmount } from '@/components/common/MonoAmount';

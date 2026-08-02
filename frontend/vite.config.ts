@@ -27,7 +27,7 @@ export default defineConfig({
           groups: [
             {
               name: 'react-vendor',
-              test: /node_modules[\\/](react|react-dom|scheduler|react-router|react-router-dom|react-is|use-sync-external-store)[\\/]/,
+              test: /node_modules[\\/](react|react-dom|scheduler|react-router|react-is|use-sync-external-store)[\\/]/,
               priority: 30,
             },
             {

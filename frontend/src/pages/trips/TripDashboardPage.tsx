@@ -1,4 +1,4 @@
-import { useParams, Navigate } from 'react-router-dom';
+import { useParams, Navigate } from 'react-router';
 import { useTrip } from '@/hooks/useTrips';
 import { useEvents } from '@/hooks/useEvents';
 import { useBalances } from '@/hooks/useLedger';

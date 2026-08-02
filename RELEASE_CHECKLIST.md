@@ -4,6 +4,11 @@ Run through every item before a production release. Anything unchecked is a
 blocker. Companion to `DEPLOYMENT.md` (runbook) and `PRODUCTION_HARDENING.md`
 (the work this checklist verifies).
 
+> **Status for the v1.0.0 release:** items in §5 (testing) and the code-side
+> items of §3 are verified locally and in CI. The cloud items (§1, §2, §4,
+> §6, §7) can only be verified against the live deployment once the deploy
+> secrets are configured in GitHub (see `DEPLOYMENT.md`).
+
 ## 1. Configuration & secrets
 
 - [ ] `backend/.env.example` is the source of truth and matches what is set in
@@ -51,13 +56,15 @@ blocker. Companion to `DEPLOYMENT.md` (runbook) and `PRODUCTION_HARDENING.md`
 
 ## 5. Testing
 
-- [ ] CI green on `main`: `pnpm lint`, `pnpm test` (posting engine +
+- [x] CI green on `main`: `pnpm lint`, `pnpm test` (posting engine +
       integration + e2e), `pnpm --filter frontend build`, `pnpm --filter
       frontend test`, `pnpm --filter frontend check:bundle`.
-- [ ] Bundle budgets met (H9): initial gzip ≤ 160 kB hard fail, total raw JS
-      ≤ 700 kB hard fail.
-- [ ] `pnpm --filter frontend test:coverage` meets the thresholds in
+- [x] Bundle budgets met (H9): initial gzip ≤ 160 kB hard fail, total raw JS
+      ≤ 700 kB hard fail. (v1.0.0 measured: 103.9 kB gzip initial, 472 kB raw.)
+- [x] `pnpm --filter frontend test:coverage` meets the thresholds in
       `vitest.config.ts`.
+- [x] `pnpm audit --prod` reports no known vulnerabilities (react-router
+      upgraded to 8.3.0 for GHSA-qwww-vcr4-c8h2).
 
 ## 6. Manual QA journey (Phase 9 of DEVELOPMENT_TIMELINE.md)
 
