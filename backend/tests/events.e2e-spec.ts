@@ -304,6 +304,24 @@ describe('Phase 4 — Business Event APIs E2E', () => {
 
       expect(res.body.type).toBe('REPAYMENT');
     });
+
+    it('rejects a non cash-movement type label (e.g. LOAN) with 400', async () => {
+      await supertest(app.getHttpServer())
+        .post(`/trips/${tripId}/events/cash-movement`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({
+          cashPayerMemberId: amalMemberId,
+          cashReceiverMemberId: hirushiMemberId,
+          amount: 1000,
+          type: 'LOAN',
+        })
+        .expect(400);
+
+      const loans = await prisma.businessEvent.findMany({
+        where: { type: 'LOAN' },
+      });
+      expect(loans).toHaveLength(0);
+    });
   });
 
   // ─── 4. Refund ──────────────────────────────────────────────────────────────

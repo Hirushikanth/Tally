@@ -8,6 +8,7 @@ import {
   IsEnum,
   IsNotEmpty,
   ArrayMinSize,
+  IsIn,
   IsNumber,
   Min,
 } from 'class-validator';
@@ -163,7 +164,10 @@ export class CreateCashMovementDto {
   @IsPositive()
   amount: number;
 
+  // Only REPAYMENT and SETTLEMENT are valid labels for a cash movement —
+  // other event types must go through their own endpoints (ACCOUNTING.md §3.5.1).
   @IsEnum(BusinessEventType)
+  @IsIn([BusinessEventType.REPAYMENT, BusinessEventType.SETTLEMENT])
   type: BusinessEventType;
 
   @IsOptional()
