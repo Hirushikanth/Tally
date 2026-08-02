@@ -36,12 +36,14 @@ runs migrations before releasing.
 | `LOG_LEVEL` | no | `info` in production. |
 | `CORS_ORIGINS` | no | Comma-separated allowlist. Only relevant when the SPA calls the API cross-origin; the nginx/Vercel topologies are same-origin. |
 | `FRONTEND_URL` | no | Validated only; reserved for future use. |
+| `SENTRY_DSN` | no | Sentry DSN for error reporting. Optional — unset disables Sentry entirely (the API still boots; 5xx responses just aren't reported). |
 
 ### Frontend (`frontend/.env.example`)
 
 | Variable | Required | Notes |
 |---|---|---|
 | `VITE_API_URL` | no | Default `/api` (same-origin). Leave unset in production. |
+| `VITE_SENTRY_DSN` | no | Sentry DSN. **Build-time only** — must be set in the Vercel project settings (or build command) *before* the build; runtime env vars on a static host do nothing. Unset → Sentry is tree-shaken out of the bundle. |
 
 ### GitHub Actions secrets (`Settings → Secrets and variables → Actions`)
 
@@ -95,17 +97,35 @@ runs migrations before releasing.
 3. Build settings: Build Command `pnpm build`, Output Directory `dist`
    (the commit `frontend/vercel.json` overrides the /api rewrite; the CLI
    deploy in CI/CD also uses these settings).
-4. Edit `frontend/vercel.json` → replace the `destination` with your real
+4. **Sentry (optional):** in Vercel → Project → Settings → Environment
+   Variables, add `VITE_SENTRY_DSN` for the Production environment (Preview/
+   Development optional). This is a *build-time* variable — it must exist
+   before the build runs or Sentry is omitted from the bundle. A dummy value
+   builds the bundle identically but sends nothing.
+5. Edit `frontend/vercel.json` → replace the `destination` with your real
    Render API URL (`https://tally-api.onrender.com/:path*`).
-5. Link locally for the CI token:
+6. Link locally for the CI token:
    ```
    npx vercel link
    npx vercel whoami            # VERCEL_ORG_ID + VERCEL_TOKEN
    cat .vercel/project.json     # VERCEL_PROJECT_ID
    ```
-6. Set GitHub secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`.
+7. Set GitHub secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`.
 
-### 4. GitHub
+### 4. Sentry
+
+1. Create a project at [sentry.io](https://sentry.io) for the **API** and copy
+   its DSN → Render service env var `SENTRY_DSN` (or the `render.yaml`
+   secret). Restart the service; a restart with the DSN set emits a
+   `sentry_sdk.init` startup event — verify it arrives in the project's Issues.
+2. Create a second project for the **SPA** and copy its DSN → Vercel
+   Production env `VITE_SENTRY_DSN` (see Vercel provisioning above), then
+   redeploy.
+3. Sanity-check: hit an endpoint with an invalid body while
+   `NODE_ENV=production` (or trigger a frontend render error) — both should
+   appear in their respective Sentry projects.
+
+### 5. GitHub
 
 1. Protect `main` — require the `ci` check to pass on PRs (Deploy assumes CI
    is green before it runs).
@@ -150,6 +170,32 @@ do not rely on the automatic flow for anything interactive.
 Order matters for rollback: never roll back the database first if the old API
 code predates a migration — roll back API/SPA, then the DB if required.
 
+## Backups
+
+**Neon PITR is the primary backup** — every Neon project enables Point-in-Time
+Recovery by default (7-day retention on the free tier; 24h–30d depending on
+plan). This covers both schema disasters and small data-loss windows:
+
+| Layer | What it protects | How |
+|---|---|---|
+| PITR | Any data loss / bad migration within the retention window | Neon dashboard → Branches & Restores → Restore → point in time; pick a timestamp, restore to a new branch, verify, then promote (or repoint `DATABASE_URL`). |
+| Weekly snapshot | Baseline beyond the PITR window; disaster recovery | Neon dashboard → Branches & Restores → **Create Branch** on a weekly schedule (dashboard supports scheduled branch creation) — or export via `pg_dump` if off-platform storage is required. Keep ≥ 4 weekly snapshots. |
+| CI smoke | Detection of silently-broken restores | The `deploy.yml` smoke journey runs against the live DB on every deploy — a corrupted backup is only caught by a restore drill, so treat the quarterly drill below as mandatory. |
+
+Operational schedule (add to your calendar / runbook):
+
+- **Daily** — no action needed (PITR runs automatically).
+- **Weekly (Mon)** — create a snapshot branch, tag it `weekly-YYYY-MM-DD`.
+  Prune to the last 4.
+- **Quarterly** — restore drill: restore the latest snapshot to a throwaway
+  branch, run `prisma migrate deploy` + a smoke journey against it, delete the
+  branch. This proves the backups actually restore (and exercises the runbook
+  for a real incident).
+
+A restore is a *new branch* — the live database is never overwritten until you
+promote the restored branch or repoint `DATABASE_URL`, so a botched restore
+cannot damage production.
+
 ## Health & observability
 
 - `GET /health` — liveness (no dependencies).
@@ -157,3 +203,7 @@ code predates a migration — roll back API/SPA, then the DB if required.
 - Structured JSON logs (pino); `x-request-id` is echoed on responses so logs
   can be correlated with a request.
 - Render: service healthchecks hit `/health`; view logs via the dashboard.
+- **Sentry** (optional): uncaught exceptions, unhandled promise rejections,
+  and every 5xx response are reported when `SENTRY_DSN` is set; frontend
+  render errors are reported via `VITE_SENTRY_DSN`. Unset = disabled (no-op),
+  so local development and CI stay quiet.

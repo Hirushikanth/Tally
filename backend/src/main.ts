@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import * as Sentry from '@sentry/nestjs';
 import { Logger } from 'nestjs-pino';
 import helmet from 'helmet';
 import { randomUUID } from 'node:crypto';
@@ -16,6 +17,16 @@ async function bootstrap() {
   });
   const config = app.get(ConfigService);
   const nodeEnv = config.get<string>('NODE_ENV', 'development');
+
+  // Sentry: optional — without SENTRY_DSN error reporting stays disabled.
+  const sentryDsn = config.get<string>('SENTRY_DSN');
+  if (sentryDsn) {
+    Sentry.init({
+      dsn: sentryDsn,
+      environment: nodeEnv,
+      tracesSampleRate: nodeEnv === 'production' ? 0.1 : 1.0,
+    });
+  }
 
   app.useLogger(app.get(Logger));
 

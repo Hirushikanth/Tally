@@ -26,6 +26,7 @@ export const envSchema = z
       .default('info'),
     CORS_ORIGINS: z.string().default('http://localhost:5173'),
     FRONTEND_URL: z.string().url().optional(),
+    SENTRY_DSN: z.string().optional(),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV === 'production' && env.JWT_SECRET.length < 32) {

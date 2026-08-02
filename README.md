@@ -15,7 +15,7 @@ A ledger-based collaborative expense management platform for trips, roommates, a
   - `Posting` / `BusinessEvent` rows are **append-only** (`UPDATE`/`DELETE` revoked from the runtime DB role)
 - Debt simplification is a **read-only suggestion** (minimal-transfers algorithm) — it becomes a real ledger entry only when you record an actual settlement.
 - `REPAYMENT` and `SETTLEMENT` share one posting implementation; the type is a label only, never branched on in accounting logic.
-- A cinematic dark UI: deep-space palette, glassmorphism, gold accents, Framer Motion micro-animations, and a fully responsive mobile layout.
+- A cinematic dark UI: deep-space palette, glassmorphism, gold accents, CSS micro-animations, and a fully responsive mobile layout.
 
 ## Tech stack
 
@@ -26,8 +26,9 @@ A ledger-based collaborative expense management platform for trips, roommates, a
 | Backend | Node.js + TypeScript + NestJS |
 | Frontend | React 19 + Vite + TypeScript (custom CSS design system) |
 | Client state | Zustand (UI state) + TanStack Query (server state) |
-| Auth | JWT (passport-jwt, bcrypt) |
-| Animations | Framer Motion |
+| Auth | JWT access + refresh tokens (passport-jwt, bcrypt, token rotation) |
+| Animations | CSS keyframe animations (`prefers-reduced-motion` aware) |
+| Error reporting | Sentry (optional — no-op without a DSN) |
 
 ## Architecture
 
@@ -152,17 +153,43 @@ Open http://localhost:5173, register an account, create a trip, and start record
 - The UI never uses accounting vocabulary ("debit", "credit", "posting", "journal entry"). Users see: paid, owes, is owed, lent, borrowed, refunded, settled.
 - `REPAYMENT` and `SETTLEMENT` share one posting implementation — the type is a label only, never branched on in accounting logic.
 
+## Auth model
+
+- **Access token** — short-lived JWT (`JWT_EXPIRES_IN`, default 15m) sent as
+  `Authorization: Bearer`; carries the user id and role.
+- **Refresh token** — long-lived opaque token (`REFRESH_TOKEN_EXPIRES_IN`,
+  default 30d) stored *hashed* (sha256) in the `RefreshToken` table. `POST
+  /auth/refresh` rotates it (old token revoked, new pair issued) so a stolen
+  refresh token is automatically invalidated on reuse; `POST /auth/logout`
+  revokes the presented token server-side.
+- The frontend keeps the refresh token in `localStorage`, retries failed
+  requests once after a single-flight refresh, and logs out when refresh
+  fails. Emails are normalized (`trim().toLowerCase()`) at the boundary, so
+  `ALICE@x.com` and `alice@x.com` are the same account.
+
 ## Roadmap status
 
-Implemented: Phases 0–8:
+Implemented: Phases 0–8 of the build timeline, plus the full production
+hardening pass (H1–H10: secrets/config validation, security headers, rate
+limiting, error standardization, pino logging, health checks, auth hardening,
+pagination, strict frontend TS, error boundaries, tests, a11y, performance,
+Docker + Render/Vercel/Neon deployment). See
+[`PRODUCTION_HARDENING.md`](PRODUCTION_HARDENING.md) for the phase-by-phase
+record, and [`DEPLOYMENT.md`](DEPLOYMENT.md) for the deploy runbook.
 
 - Foundation, Posting Engine, persistence layer with DB-enforced invariants
-- Auth (JWT + roles), Trips/Members APIs, all six Business Event types
+- Auth (JWT access + refresh rotation), Trips/Members APIs, all six Business
+  Event types
 - Read path: balances, member ledger, settlement suggestions, balance snapshot
 - Frontend features: expense/loan/payment forms, dashboard, balances, ledger view
-- Visual design pass: dark glassmorphism theme, Framer Motion micro-animations, responsive mobile layout (off-canvas sidebar, bottom-sheet modals)
+- Visual design pass: dark glassmorphism theme, responsive mobile layout,
+  CSS animations (self-hosted fonts, reduced-motion aware)
+- Deployment: Docker compose (self-host), Render API + Vercel SPA + Neon
+  Postgres with CI/CD, live smoke test
+- Ops: Sentry error reporting (optional), backup runbook, release checklist
 
-Remaining: full QA, deployment (Render + Vercel + Neon), documentation.
+Remaining: full QA sign-off per [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md)
+and one real production deploy.
 
 ## License
 

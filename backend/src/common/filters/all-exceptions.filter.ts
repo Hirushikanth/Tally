@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
+import * as Sentry from '@sentry/nestjs';
 import { Prisma } from '@prisma/client';
 import { Request, Response } from 'express';
 import { PostingEngineError } from '../../posting-engine/errors';
@@ -63,6 +64,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
           exception.stack,
           context.requestId,
         );
+        capture(exception, context);
       }
       response.status(status).json({
         statusCode: status,
@@ -76,6 +78,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
+      if (status >= 500) {
+        capture(exception, context);
+      }
       const payload = exception.getResponse();
       const body = typeof payload === 'string' ? { message: payload } : payload;
       response.status(status).json({ ...body, ...context });
@@ -89,6 +94,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       exception instanceof Error ? exception.stack : undefined,
       context.requestId,
     );
+    capture(exception, context);
     response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
       statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
       error: 'Internal Server Error',
@@ -114,4 +120,17 @@ function prismaMessage(code: string, status: HttpStatus): string {
         ? 'Internal server error'
         : 'Database operation failed';
   }
+}
+
+// Report 5xx failures to Sentry. No-op when the SDK was never initialized
+// (no SENTRY_DSN) — error reporting must never crash the request path.
+function capture(exception: unknown, context: ErrorContext): void {
+  if (!Sentry.isInitialized()) return;
+  Sentry.captureException(
+    exception instanceof Error ? exception : new Error(String(exception)),
+    {
+      tags: { handler: AllExceptionsFilter.name },
+      extra: { path: context.path, requestId: context.requestId },
+    },
+  );
 }

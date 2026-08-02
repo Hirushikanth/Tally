@@ -863,6 +863,54 @@ pnpm --filter frontend test
 pnpm --filter backend exec prisma migrate status
 ```
 
+### Status — H11 complete (2026-08-03)
+
+- **Sentry — backend** (`@sentry/nestjs`): `Sentry.init` in `main.ts` guarded
+  by `SENTRY_DSN` (unset → SDK never initialized; `Sentry.isInitialized()`
+  guards every capture site, so the request path can never crash on error
+  reporting). Captures: uncaught exceptions + unhandled rejections (Node SDK
+  defaults) and every 5xx from the global filter (`all-exceptions.filter.ts`
+  → `capture(exception, context)` on 500 Prisma errors, 500+ `HttpException`s,
+  and the generic 500 path — tagged with handler + `x-request-id` + path).
+  `SENTRY_DSN` added to `env.validation.ts` (optional), `backend/.env.example`,
+  and `render.yaml` (secret, `sync: false`). Verified: production boot with a
+  DSN → `/health` + `/health/ready` green.
+- **Sentry — frontend** (`@sentry/react`): `Sentry.init` in `main.tsx` from
+  `VITE_SENTRY_DSN`; the existing H6 `ErrorBoundary` now reports caught render
+  errors via `Sentry.captureException` (component stack attached) when
+  initialized. Documented in `frontend/.env.example`.
+- **Build-time DSN gotcha (verified, not just assumed):** `VITE_SENTRY_DSN` is
+  build-time — unset at build, Vite constant-folds `if (sentryDsn)` and
+  tree-shakes the SDK out of the bundle (measured: initial gzip stays
+  101.2 → **104.5 kB**). Set at build, the SDK is bundled:
+  546 kB raw / **128.3 kB gzip** — inside the H9 budgets (warn 550/130).
+  Therefore the CI frontend build now sets a dummy
+  `VITE_SENTRY_DSN` (`.github/workflows/ci.yml`) so `check:bundle` guards the
+  real production payload, and DEPLOYMENT.md's Vercel provisioning tells the
+  operator to set `VITE_SENTRY_DSN` in the Vercel project env *before* build.
+- **Backups (task 2):** new `Backups` section in `DEPLOYMENT.md` — Neon PITR
+  as the primary backup, weekly snapshot-branch schedule (keep ≥ 4, tag
+  `weekly-YYYY-MM-DD`), and a mandatory quarterly restore drill (restore →
+  `migrate deploy` → smoke → delete), plus the "restore is a new branch,
+  production is never overwritten" safety note.
+- **README (task 3):** roadmap moved to "deployment + ops done", new "Auth
+  model" section (access/refresh rotation, hashed refresh tokens, logout
+  revocation, email normalization), `PRODUCTION_HARDENING.md` +
+  `DEPLOYMENT.md` linked, stale "Framer Motion" tech-stack rows corrected to
+  CSS animations + refresh-token auth + Sentry.
+- **Release checklist (task 5):** `RELEASE_CHECKLIST.md` — env/secrets,
+  DB/migrations/backups, API health & security probes, Sentry verification,
+  test gates (incl. bundle budgets), the Phase 9 manual QA journey (refresh
+  flow, error states, keyboard/a11y, reduced-motion), and release/rollback
+  steps — every item checkable, any unchecked item is a blocker.
+- **Full regression (task 4):** `pnpm lint` 0 errors; backend 141 tests
+  (posting engine 61 + integration 38 + e2e 42) green; frontend 70 tests
+  green; `pnpm --filter backend build` + frontend build (production-like, DSN
+  set) green; `check:bundle` 546 kB raw / 128.3 kB gzip [ok]; `prisma migrate
+  status` — schema up to date. The Phase 9 manual journey remains a
+  human-in-the-loop release step (checklist section 6) — e2e `read-path-and-
+  journey.e2e-spec.ts` automates its API half.
+
 ---
 
 ## Sequencing rules

@@ -48,7 +48,13 @@ jobs:
 
       - run: pnpm --filter backend build
 
-      - run: pnpm --filter frontend build
+      # VITE_SENTRY_DSN is a build-time var: a dummy DSN makes the build behave
+      # like production (Sentry bundled), so check:bundle guards the real
+      # production payload. No events are actually sent with this placeholder.
+      - name: Build frontend (with Sentry, like production)
+        env:
+          VITE_SENTRY_DSN: https://dummy@ci.ingest.sentry.io/0000000000
+        run: pnpm --filter frontend build
 
       # Phase H9: fail the build if the JS bundle regresses past the budget.
       - run: pnpm --filter frontend check:bundle

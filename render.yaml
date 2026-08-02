@@ -6,6 +6,7 @@
 #   Then set the secrets (sync: false vars) in the dashboard / API:
 #     DATABASE_URL   — Neon pooled connection string (app_runtime role)
 #     JWT_SECRET     — openssl rand -base64 48
+#     SENTRY_DSN     — optional; omit to disable Sentry error reporting
 #   CORS_ORIGINS / FRONTEND_URL must match the SPA origin (Vercel or the
 #   nginx container) — update the values below before first deploy.
 #
@@ -43,4 +44,6 @@ services:
       - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET
+        sync: false
+      - key: SENTRY_DSN
         sync: false
