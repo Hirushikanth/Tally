@@ -461,6 +461,42 @@ pnpm --filter frontend test
 pnpm --filter frontend test -- --coverage
 ```
 
+### Status — H7 complete (2026-08-03)
+
+- **Setup:** `vitest@4`, `@testing-library/react`, `@testing-library/jest-dom`,
+  `@testing-library/user-event`, `jsdom`, `@vitest/coverage-v8` installed;
+  `frontend/vitest.config.ts` reuses the `@` alias + react plugin;
+  `src/test/setup.ts` (jest-dom, RTL cleanup, matchMedia/WAAPI shims,
+  framer-motion passthrough mock so exit animations never strand DOM nodes);
+  `src/test/testUtils.tsx` (`renderWithProviders` + `createTestQueryClient`);
+  `src/test/fixtures.ts` (mock `Trip`/`AuthResponse` builders).
+  Scripts: `test` (`vitest run`), `test:watch`, `test:coverage`.
+- **Covered (63 tests / 11 files):**
+  - `lib/utils.ts` — 100% (amount/balance formatting, initials, dates,
+    event/category labels).
+  - Auth flow — `LoginPage` + `RegisterPage`: render, zod validation errors,
+    submit calls API (mocked `@/api/auth`) and navigates, server-error display,
+    authenticated redirect.
+  - Core UI — `Modal` (open/close, overlay vs. panel click, dialog aria),
+    `ToastContainer` (render + click-to-dismiss), `MonoAmount`, `GlassCard`,
+    `ErrorBoundary` (fallback UI, custom fallback, reload button).
+  - State — `auth.store`: login/logout/updateUser, localStorage persist +
+    rehydrate round-trip (fresh module import simulates a page reload).
+  - Page smoke — `TripsListPage` (renders trips, empty state, error state with
+    working retry), `ExpensesPage` (error-state regression guard for the H6
+    fix, events render, empty state). Hooks mocked via `vi.mock`.
+- **Coverage baseline** (`pnpm --filter frontend test:coverage`):
+  - `lib/`: **100%** stmts/branch/funcs/lines.
+  - `components/common/`: **95.7%** stmts, **87.8%** branch, **90.9%** funcs
+    (only `Avatar.tsx` untested at 0%).
+  - All files: **98.0%** stmts, **91.7%** branch, **94.4%** funcs, **97.9%**
+    lines. Thresholds in `vitest.config.ts` enforce ≥ 40% on the target dirs
+    (well above actuals).
+- **CI:** `.github/workflows/ci.yml` runs `pnpm --filter frontend test` after
+  the frontend build.
+- `pnpm --filter frontend build` and `pnpm --filter frontend lint` stay green
+  (test files are typechecked by `tsc -b`).
+
 ---
 
 ## Phase H8 — Accessibility (frontend)

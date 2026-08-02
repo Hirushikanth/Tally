@@ -51,6 +51,8 @@ jobs:
 
       - run: pnpm --filter frontend build
 
+      - run: pnpm --filter frontend test
+
       # Phase H1: the production build must refuse to boot without a JWT_SECRET.
       - name: Fail-fast without JWT_SECRET (production)
         run: |
