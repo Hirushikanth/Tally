@@ -3,7 +3,8 @@
   "rootDir": "..",
   "testMatch": [
     "<rootDir>/tests/posting-engine.spec.ts",
-    "<rootDir>/tests/ledger-settlements.spec.ts"
+    "<rootDir>/tests/ledger-settlements.spec.ts",
+    "<rootDir>/tests/env-validation.spec.ts"
   ],
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"

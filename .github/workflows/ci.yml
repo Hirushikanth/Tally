@@ -47,6 +47,17 @@ jobs:
 
       - run: pnpm lint
 
+      - run: pnpm --filter backend build
+
       - run: pnpm --filter frontend build
+
+      # Phase H1: the production build must refuse to boot without a JWT_SECRET.
+      - name: Fail-fast without JWT_SECRET (production)
+        run: |
+          if JWT_SECRET= NODE_ENV=production DATABASE_URL=postgresql://test:test@localhost:5432/tally_test node backend/dist/main.js; then
+            echo "FAIL: server booted without JWT_SECRET" && exit 1
+          else
+            echo "PASS: server refused to boot without JWT_SECRET"
+          fi
 
       - run: pnpm test
