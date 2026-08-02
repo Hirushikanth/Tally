@@ -24,32 +24,50 @@ concurrency:
 
 jobs:
   deploy:
-    # Skip (not fail) until the production secrets are configured.
-    if: ${{ secrets.RENDER_API_KEY != '' && secrets.RENDER_SERVICE_ID != '' && secrets.DATABASE_URL_OWNER != '' && secrets.API_URL != '' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
+      # GitHub does not allow the `secrets` context in `if:` conditions, so the
+      # guard is a step that publishes a boolean; every deploy step is gated on
+      # it. Until the secrets exist the run finishes green (deploy skipped).
+      - name: Check deploy secrets
+        id: secrets-check
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+          DATABASE_URL_OWNER: ${{ secrets.DATABASE_URL_OWNER }}
+          API_URL: ${{ secrets.API_URL }}
+        run: |
+          if [ -z "$RENDER_API_KEY" ] || [ -z "$RENDER_SERVICE_ID" ] || [ -z "$DATABASE_URL_OWNER" ] || [ -z "$API_URL" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Deploy secrets not configured; deployment skipped. See DEPLOYMENT.md."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.secrets-check.outputs.configured == 'true'
+        uses: pnpm/action-setup@v4
         # No `version` key: the packageManager field in package.json pins pnpm.
 
-      - uses: actions/setup-node@v4
+      - if: steps.secrets-check.outputs.configured == 'true'
+        uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: pnpm
 
       - name: Install dependencies
+        if: steps.secrets-check.outputs.configured == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Apply database migrations (owner connection)
+        if: steps.secrets-check.outputs.configured == 'true'
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_OWNER }}
         run: pnpm --filter backend exec prisma migrate deploy
 
       - name: Deploy API to Render
-        env:
-          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+        if: steps.secrets-check.outputs.configured == 'true'
         run: |
           curl -fsS -X POST \
             "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" \
@@ -58,6 +76,7 @@ jobs:
             -d '{}'
 
       - name: Wait for API health
+        if: steps.secrets-check.outputs.configured == 'true'
         env:
           API_URL: ${{ secrets.API_URL }}
         run: |
@@ -72,6 +91,7 @@ jobs:
           exit 1
 
       - name: Deploy SPA to Vercel
+        if: steps.secrets-check.outputs.configured == 'true'
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
@@ -79,6 +99,7 @@ jobs:
         run: npx vercel@latest --cwd frontend --prod --yes --token "$VERCEL_TOKEN"
 
       - name: Smoke test live stack
+        if: steps.secrets-check.outputs.configured == 'true'
         env:
           API_URL: ${{ secrets.API_URL }}
         run: |
