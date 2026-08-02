@@ -12,6 +12,12 @@
   gap: 16px;
 }
 
+.expenses-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .expenses-title {
   font-size: 22px;
   font-weight: 600;

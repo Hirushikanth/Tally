@@ -1,6 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { eventsApi } from '@/api/events';
-import type { CreateSharedExpenseDto, CreateCashMovementDto } from '@/api/types';
+import type {
+  CreateSharedExpenseDto,
+  CreateLoanDto,
+  CreateCashMovementDto,
+} from '@/api/types';
 
 export const eventKeys = {
   list: (tripId: string) => ['trips', tripId, 'events'] as const,
@@ -38,6 +42,14 @@ export function useCreateSharedExpense(tripId: string) {
   return useMutation({
     mutationFn: (dto: CreateSharedExpenseDto) =>
       eventsApi.createSharedExpense(tripId, dto),
+    onSuccess: invalidate,
+  });
+}
+
+export function useCreateLoan(tripId: string) {
+  const invalidate = useInvalidateAll(tripId);
+  return useMutation({
+    mutationFn: (dto: CreateLoanDto) => eventsApi.createLoan(tripId, dto),
     onSuccess: invalidate,
   });
 }

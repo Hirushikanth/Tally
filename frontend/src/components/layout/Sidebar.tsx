@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { label: 'Dashboard', path: '', icon: '◈', end: true },
   { label: 'All Expenses', path: 'expenses', icon: '≡' },
   { label: 'Balances', path: 'balances', icon: '⚖' },
+  { label: 'Ledger', path: 'ledger', icon: '▤' },
   { label: 'Settle Up', path: 'settle', icon: '✓' },
 ];
 

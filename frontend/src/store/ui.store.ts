@@ -9,6 +9,14 @@ interface UIState {
   addExpenseModalOpen: boolean;
   setAddExpenseModalOpen: (open: boolean) => void;
 
+  // Add loan modal
+  addLoanModalOpen: boolean;
+  setAddLoanModalOpen: (open: boolean) => void;
+
+  // Add cash movement modal (repayment / settlement)
+  addCashMovementModalOpen: boolean;
+  setAddCashMovementModalOpen: (open: boolean) => void;
+
   // Add member modal
   addMemberModalOpen: boolean;
   setAddMemberModalOpen: (open: boolean) => void;
@@ -37,6 +45,12 @@ export const useUIStore = create<UIState>((set, get) => ({
 
   addExpenseModalOpen: false,
   setAddExpenseModalOpen: (open) => set({ addExpenseModalOpen: open }),
+
+  addLoanModalOpen: false,
+  setAddLoanModalOpen: (open) => set({ addLoanModalOpen: open }),
+
+  addCashMovementModalOpen: false,
+  setAddCashMovementModalOpen: (open) => set({ addCashMovementModalOpen: open }),
 
   addMemberModalOpen: false,
   setAddMemberModalOpen: (open) => set({ addMemberModalOpen: open }),

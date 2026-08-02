@@ -77,3 +77,171 @@
   border-radius: var(--radius-sm);
   padding: 8px 12px;
 }
+
+.split-preview-ok {
+  color: var(--green);
+  border-color: rgba(111, 207, 151, 0.25);
+}
+
+.split-preview-warn {
+  color: var(--gold-soft);
+  border-color: rgba(212, 175, 106, 0.25);
+}
+
+/* ============================================================
+   WHO PAID — multi-payer rows
+   ============================================================ */
+
+.payer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.payer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 8px 6px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-glass);
+  background: var(--bg-card);
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.payer-row.selected {
+  border-color: rgba(212, 175, 106, 0.3);
+}
+
+.payer-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  color: var(--text-mid);
+  font-size: 13px;
+  font-family: var(--font-sans);
+  padding: 0;
+  text-align: left;
+  flex: 1;
+  min-width: 0;
+}
+
+.payer-toggle span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.payer-row.selected .payer-toggle {
+  color: var(--text-hi);
+}
+
+.payer-check {
+  margin-left: auto;
+  margin-right: 6px;
+  font-size: 12px;
+  color: var(--gold);
+}
+
+.payer-amount {
+  width: 132px;
+  flex-shrink: 0;
+}
+
+.payer-amount-input {
+  padding-left: 34px;
+  padding-top: 7px;
+  padding-bottom: 7px;
+  font-size: 13px;
+}
+
+/* ============================================================
+   SPLIT METHOD TABS
+   ============================================================ */
+
+.split-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.split-tab {
+  padding: 7px 13px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-glass);
+  background: var(--bg-card);
+  color: var(--text-mid);
+  font-size: 12.5px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.split-tab:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-hi);
+}
+
+.split-tab.active {
+  background: var(--gold-dim);
+  border-color: rgba(212, 175, 106, 0.3);
+  color: var(--gold-soft);
+}
+
+/* ============================================================
+   PER-PERSON SPLIT INPUTS
+   ============================================================ */
+
+.split-input-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.split-input-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-glass);
+  background: var(--bg-card);
+}
+
+.split-input-name {
+  font-size: 13px;
+  color: var(--text-hi);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.split-input-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 132px;
+  flex-shrink: 0;
+}
+
+.split-number-input {
+  padding-top: 7px;
+  padding-bottom: 7px;
+  font-size: 13px;
+  width: 100%;
+}
+
+.split-input-unit {
+  position: absolute;
+  right: 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-low);
+  pointer-events: none;
+}

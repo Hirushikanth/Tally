@@ -7,6 +7,8 @@ import { Button } from '@/components/common/Button';
 import { useUIStore } from '@/store/ui.store';
 import { categoryIcon, eventTypeLabel, formatDate } from '@/lib/utils';
 import { AddExpenseModal } from './modals/AddExpenseModal';
+import { AddLoanModal } from './modals/AddLoanModal';
+import { AddCashMovementModal } from './modals/AddCashMovementModal';
 import { useAuthStore } from '@/store/auth.store';
 import './ExpensesPage.css';
 
@@ -17,6 +19,10 @@ export function ExpensesPage() {
   const { data: events, isLoading } = useEvents(tripId ?? null);
   const addExpenseModalOpen = useUIStore((s) => s.addExpenseModalOpen);
   const setAddExpenseModalOpen = useUIStore((s) => s.setAddExpenseModalOpen);
+  const addLoanModalOpen = useUIStore((s) => s.addLoanModalOpen);
+  const setAddLoanModalOpen = useUIStore((s) => s.setAddLoanModalOpen);
+  const addCashMovementModalOpen = useUIStore((s) => s.addCashMovementModalOpen);
+  const setAddCashMovementModalOpen = useUIStore((s) => s.setAddCashMovementModalOpen);
 
   if (!tripId) return <Navigate to="/trips" replace />;
 
@@ -35,9 +41,13 @@ export function ExpensesPage() {
             {events?.length ?? 0} expense{events?.length !== 1 ? 's' : ''} in {trip?.name ?? '…'}
           </p>
         </div>
-        <Button variant="primary" onClick={() => setAddExpenseModalOpen(true)}>
-          + Add expense
-        </Button>
+        <div className="expenses-actions">
+          <Button onClick={() => setAddLoanModalOpen(true)}>💸 Loan</Button>
+          <Button onClick={() => setAddCashMovementModalOpen(true)}>✓ Record payment</Button>
+          <Button variant="primary" onClick={() => setAddExpenseModalOpen(true)}>
+            + Add expense
+          </Button>
+        </div>
       </div>
 
       <GlassCard className="expenses-list">
@@ -90,6 +100,26 @@ export function ExpensesPage() {
           currency={trip.currency}
           currentMemberId={myMember.id}
           onClose={() => setAddExpenseModalOpen(false)}
+        />
+      )}
+
+      {addLoanModalOpen && myMember && trip && (
+        <AddLoanModal
+          tripId={tripId}
+          members={trip.members}
+          currency={trip.currency}
+          currentMemberId={myMember.id}
+          onClose={() => setAddLoanModalOpen(false)}
+        />
+      )}
+
+      {addCashMovementModalOpen && myMember && trip && (
+        <AddCashMovementModal
+          tripId={tripId}
+          members={trip.members}
+          currency={trip.currency}
+          currentMemberId={myMember.id}
+          onClose={() => setAddCashMovementModalOpen(false)}
         />
       )}
     </div>

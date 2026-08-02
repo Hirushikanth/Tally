@@ -9,6 +9,8 @@ import { GlassCard } from '@/components/common/GlassCard';
 import { Avatar } from '@/components/common/Avatar';
 import { MonoAmount } from '@/components/common/MonoAmount';
 import { AddExpenseModal } from './modals/AddExpenseModal';
+import { AddLoanModal } from './modals/AddLoanModal';
+import { AddCashMovementModal } from './modals/AddCashMovementModal';
 import { AddMemberModal } from './modals/AddMemberModal';
 import { formatAmount, formatBalance, categoryIcon, eventTypeLabel, formatDate } from '@/lib/utils';
 import type { BusinessEvent, MemberBalanceDto } from '@/api/types';
@@ -18,8 +20,12 @@ export function TripDashboardPage() {
   const { tripId } = useParams<{ tripId: string }>();
   const user = useAuthStore((s) => s.user);
   const setAddExpenseModalOpen = useUIStore((s) => s.setAddExpenseModalOpen);
+  const setAddLoanModalOpen = useUIStore((s) => s.setAddLoanModalOpen);
+  const setAddCashMovementModalOpen = useUIStore((s) => s.setAddCashMovementModalOpen);
   const setAddMemberModalOpen = useUIStore((s) => s.setAddMemberModalOpen);
   const addExpenseModalOpen = useUIStore((s) => s.addExpenseModalOpen);
+  const addLoanModalOpen = useUIStore((s) => s.addLoanModalOpen);
+  const addCashMovementModalOpen = useUIStore((s) => s.addCashMovementModalOpen);
   const addMemberModalOpen = useUIStore((s) => s.addMemberModalOpen);
 
   const { data: trip, isLoading: tripLoading } = useTrip(tripId ?? null);
@@ -77,6 +83,12 @@ export function TripDashboardPage() {
         <div className="dashboard-actions">
           <Button onClick={() => setAddMemberModalOpen(true)}>
             👤 Add member
+          </Button>
+          <Button onClick={() => setAddLoanModalOpen(true)}>
+            💸 Loan
+          </Button>
+          <Button onClick={() => setAddCashMovementModalOpen(true)}>
+            ✓ Record payment
           </Button>
           <Button variant="primary" onClick={() => setAddExpenseModalOpen(true)}>
             + Add expense
@@ -188,7 +200,7 @@ export function TripDashboardPage() {
             )}
             <button
               className="settle-btn"
-              onClick={() => setAddExpenseModalOpen(false)}
+              onClick={() => setAddCashMovementModalOpen(true)}
             >
               Settle up →
             </button>
@@ -204,6 +216,26 @@ export function TripDashboardPage() {
           currency={trip.currency}
           currentMemberId={myMember.id}
           onClose={() => setAddExpenseModalOpen(false)}
+        />
+      )}
+
+      {addLoanModalOpen && myMember && (
+        <AddLoanModal
+          tripId={tripId}
+          members={trip.members}
+          currency={trip.currency}
+          currentMemberId={myMember.id}
+          onClose={() => setAddLoanModalOpen(false)}
+        />
+      )}
+
+      {addCashMovementModalOpen && myMember && (
+        <AddCashMovementModal
+          tripId={tripId}
+          members={trip.members}
+          currency={trip.currency}
+          currentMemberId={myMember.id}
+          onClose={() => setAddCashMovementModalOpen(false)}
         />
       )}
 
