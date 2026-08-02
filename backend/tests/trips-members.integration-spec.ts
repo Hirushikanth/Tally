@@ -40,7 +40,7 @@ describe('Phase 3 — Auth, Trips & Members E2E', () => {
 
   beforeEach(async () => {
     await prisma.$executeRawUnsafe(
-      `TRUNCATE TABLE "Posting", "Attachment", "BusinessEvent", "BalanceSnapshot", "Member", "Trip", "User" CASCADE;`,
+      `TRUNCATE TABLE "Posting", "Attachment", "BusinessEvent", "BalanceSnapshot", "Member", "Trip", "User", "RefreshToken" CASCADE;`,
     );
   });
 
@@ -68,6 +68,19 @@ describe('Phase 3 — Auth, Trips & Members E2E', () => {
         .expect(409);
     });
 
+    it('returns 409 (not 500) when two concurrent registrations race on the same email', async () => {
+      const attempt = () =>
+        supertest(app.getHttpServer())
+          .post('/auth/register')
+          .send({ name: 'Racer', email: 'racer@example.com', password: 'password123' });
+
+      const [a, b] = await Promise.all([attempt(), attempt()]);
+      const statuses = [a.status, b.status].sort();
+      // P2002 unique violation surfaces as 409 via the global filter,
+      // never a masked 500.
+      expect(statuses).toEqual([201, 409]);
+    });
+
     it('returns 400 for invalid email format', async () => {
       await supertest(app.getHttpServer())
         .post('/auth/register')
@@ -80,6 +93,31 @@ describe('Phase 3 — Auth, Trips & Members E2E', () => {
         .post('/auth/register')
         .send({ name: 'Alice', email: 'alice@example.com', password: 'short' })
         .expect(400);
+    });
+
+    it('normalizes email to trimmed lowercase before storing', async () => {
+      const res = await supertest(app.getHttpServer())
+        .post('/auth/register')
+        .send({ name: 'Alice', email: '  Alice@Example.COM ', password: 'password123' })
+        .expect(201);
+
+      expect(res.body.user.email).toBe('alice@example.com');
+
+      // Login with the normalized email also succeeds
+      const login = await supertest(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: 'ALICE@example.com', password: 'password123' })
+        .expect(200);
+      expect(login.body.user.email).toBe('alice@example.com');
+    });
+
+    it('returns refreshToken alongside accessToken', async () => {
+      const res = await supertest(app.getHttpServer())
+        .post('/auth/register')
+        .send({ name: 'Carol', email: 'carol@example.com', password: 'password123' })
+        .expect(201);
+
+      expect(res.body.refreshToken).toBeDefined();
     });
   });
 
@@ -111,6 +149,87 @@ describe('Phase 3 — Auth, Trips & Members E2E', () => {
         .post('/auth/login')
         .send({ email: 'ghost@example.com', password: 'password123' })
         .expect(401);
+    });
+  });
+
+  // ─── Refresh tokens ───────────────────────────────────────────────────────
+
+  describe('POST /auth/refresh', () => {
+    it('rotates the refresh token and issues a fresh access token', async () => {
+      const reg = await supertest(app.getHttpServer())
+        .post('/auth/register')
+        .send({ name: 'Dana', email: 'dana@example.com', password: 'password123' });
+      const firstRefresh = reg.body.refreshToken as string;
+
+      const res = await supertest(app.getHttpServer())
+        .post('/auth/refresh')
+        .send({ refreshToken: firstRefresh })
+        .expect(200);
+
+      expect(res.body.accessToken).toBeDefined();
+      expect(res.body.refreshToken).toBeDefined();
+      expect(res.body.refreshToken).not.toBe(firstRefresh);
+      expect(res.body.user.email).toBe('dana@example.com');
+    });
+
+    it('rejects a rotated (reused) refresh token', async () => {
+      const reg = await supertest(app.getHttpServer())
+        .post('/auth/register')
+        .send({ name: 'Eve', email: 'eve@example.com', password: 'password123' });
+      const firstRefresh = reg.body.refreshToken as string;
+
+      await supertest(app.getHttpServer())
+        .post('/auth/refresh')
+        .send({ refreshToken: firstRefresh })
+        .expect(200);
+
+      // Replay of the presented token after rotation must fail
+      await supertest(app.getHttpServer())
+        .post('/auth/refresh')
+        .send({ refreshToken: firstRefresh })
+        .expect(401);
+    });
+
+    it('returns 401 for an unknown token', async () => {
+      await supertest(app.getHttpServer())
+        .post('/auth/refresh')
+        .send({ refreshToken: 'totally-bogus-token' })
+        .expect(401);
+    });
+  });
+
+  describe('POST /auth/logout', () => {
+    it('revokes the refresh token so it can no longer be used', async () => {
+      const reg = await supertest(app.getHttpServer())
+        .post('/auth/register')
+        .send({ name: 'Frank', email: 'frank@example.com', password: 'password123' });
+      const refreshToken = reg.body.refreshToken as string;
+
+      await supertest(app.getHttpServer())
+        .post('/auth/logout')
+        .send({ refreshToken })
+        .expect(200);
+
+      await supertest(app.getHttpServer())
+        .post('/auth/refresh')
+        .send({ refreshToken })
+        .expect(401);
+    });
+
+    it('is idempotent — logging out twice still succeeds', async () => {
+      const reg = await supertest(app.getHttpServer())
+        .post('/auth/register')
+        .send({ name: 'Grace', email: 'grace@example.com', password: 'password123' });
+      const refreshToken = reg.body.refreshToken as string;
+
+      await supertest(app.getHttpServer())
+        .post('/auth/logout')
+        .send({ refreshToken })
+        .expect(200);
+      await supertest(app.getHttpServer())
+        .post('/auth/logout')
+        .send({ refreshToken })
+        .expect(200);
     });
   });
 

@@ -27,7 +27,8 @@ describe('Env validation (Phase H1 — fail-fast config)', () => {
     expect(exitSpy).not.toHaveBeenCalled();
     expect(env.NODE_ENV).toBe('development');
     expect(env.PORT).toBe(3000);
-    expect(env.JWT_EXPIRES_IN).toBe('7d');
+    expect(env.JWT_EXPIRES_IN).toBe('15m');
+    expect(env.REFRESH_TOKEN_EXPIRES_IN).toBe('30d');
     expect(env.CORS_ORIGINS).toBe('http://localhost:5173');
   });
 

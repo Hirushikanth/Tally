@@ -1,5 +1,6 @@
-import axios from 'axios';
+import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '@/store/auth.store';
+import { authApi } from './auth';
 
 // Axios instance pointing at Vite dev proxy or direct backend
 export const apiClient = axios.create({
@@ -9,10 +10,11 @@ export const apiClient = axios.create({
   },
 });
 
+const AUTH_EXEMPT_URLS = ['/auth/login', '/auth/register', '/auth/refresh'];
+
 // ── Request interceptor: inject JWT from Zustand auth store ──
 apiClient.interceptors.request.use(
   (config) => {
-    // Read token directly from localStorage to avoid circular dependency with Zustand
     const token = useAuthStore.getState().token;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -22,14 +24,65 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error),
 );
 
-// ── Response interceptor: handle 401 → logout & redirect ──
+// ── Response interceptor: single-flight refresh on 401 ──
+// Concurrent 401s share one refresh call via a queued promise.
+let refreshPromise: Promise<string | null> | null = null;
+
+function refreshAccessToken(): Promise<string | null> {
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      const refreshToken = useAuthStore.getState().refreshToken;
+      if (!refreshToken) {
+        return null;
+      }
+      try {
+        // Bypass interceptors: /auth/refresh must not itself trigger refresh
+        const { data } = await axios.post<{
+          accessToken: string;
+          refreshToken: string;
+          user: { id: string; name: string; email: string };
+        }>('/api/auth/refresh', { refreshToken });
+        useAuthStore.getState().setAuth(data);
+        return data.accessToken;
+      } catch {
+        useAuthStore.getState().logout();
+        return null;
+      } finally {
+        refreshPromise = null;
+      }
+    })();
+  }
+  return refreshPromise;
+}
+
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
+  async (error: AxiosError) => {
+    const { response, config } = error;
+    const url = config?.url ?? '';
+    const isAuthExempt = AUTH_EXEMPT_URLS.some((u) => url.includes(u));
+
+    if (
+      response?.status === 401 &&
+      !isAuthExempt &&
+      config &&
+      !config.__isRetry
+    ) {
+      const newToken = await refreshAccessToken();
+      if (newToken) {
+        config.__isRetry = true;
+        config.headers.Authorization = `Bearer ${newToken}`;
+        return apiClient(config);
+      }
       useAuthStore.getState().logout();
       window.location.href = '/login';
     }
     return Promise.reject(error);
   },
 );
+
+declare module 'axios' {
+  interface InternalAxiosRequestConfig {
+    __isRetry?: boolean;
+  }
+}

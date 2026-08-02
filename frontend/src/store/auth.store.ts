@@ -11,8 +11,10 @@ interface AuthUser {
 interface AuthState {
   user: AuthUser | null;
   token: string | null;
+  refreshToken: string | null;
   isAuthenticated: boolean;
   login: (response: AuthResponse) => void;
+  setAuth: (response: AuthResponse) => void;
   logout: () => void;
   updateUser: (user: AuthUser) => void;
 }
@@ -22,12 +24,23 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       token: null,
+      refreshToken: null,
       isAuthenticated: false,
 
       login: (response: AuthResponse) => {
         set({
           user: response.user,
           token: response.accessToken,
+          refreshToken: response.refreshToken,
+          isAuthenticated: true,
+        });
+      },
+
+      setAuth: (response: AuthResponse) => {
+        set({
+          user: response.user,
+          token: response.accessToken,
+          refreshToken: response.refreshToken,
           isAuthenticated: true,
         });
       },
@@ -36,6 +49,7 @@ export const useAuthStore = create<AuthState>()(
         set({
           user: null,
           token: null,
+          refreshToken: null,
           isAuthenticated: false,
         });
       },
@@ -46,10 +60,11 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'tally-auth',
-      // Only persist user and token — not callbacks
+      // Only persist user and tokens — not callbacks
       partialize: (state) => ({
         user: state.user,
         token: state.token,
+        refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
       }),
     },

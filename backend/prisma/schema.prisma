@@ -29,6 +29,28 @@ model User {
   memberships   Member[]
   createdTrips  Trip[]          @relation("TripCreator")
   createdEvents BusinessEvent[] @relation("EventCreator")
+  refreshTokens RefreshToken[]
+}
+
+// ------------------------------------------------------------
+// Refresh tokens — opaque, stored as SHA-256 hashes only.
+// Rotation chain: a refreshed token is revoked and linked to its
+// replacement via replacedByTokenId.
+// ------------------------------------------------------------
+
+model RefreshToken {
+  id                 String    @id @default(cuid())
+  userId             String
+  tokenHash          String    @unique
+  expiresAt          DateTime
+  revokedAt          DateTime?
+  replacedByTokenId  String?   @unique
+  createdAt          DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 

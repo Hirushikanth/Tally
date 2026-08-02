@@ -1,5 +1,6 @@
 import { NavLink, useNavigate, useParams } from 'react-router-dom';
 import { useTrips } from '@/hooks/useTrips';
+import { authApi } from '@/api/auth';
 import { useAuthStore } from '@/store/auth.store';
 import { useUIStore } from '@/store/ui.store';
 import { Avatar } from '@/components/common/Avatar';
@@ -25,7 +26,15 @@ export function Sidebar() {
 
   const closeDrawer = () => setSidebarOpen(false);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const refreshToken = useAuthStore.getState().refreshToken;
+    if (refreshToken) {
+      try {
+        await authApi.logout(refreshToken);
+      } catch {
+        // Revocation is best-effort; always clear local session
+      }
+    }
     logout();
     setSidebarOpen(false);
     navigate('/login');

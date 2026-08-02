@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { MemberRole } from '@prisma/client';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { normalizeEmail } from '../auth/auth.service';
 import { AddMemberDto } from './members.dto';
 
 @Injectable()
@@ -13,12 +14,13 @@ export class MembersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async addMember(tripId: string, dto: AddMemberDto) {
-    // Resolve user by email
+    // Resolve user by email (normalized the same way auth does)
     const user = await this.prisma.user.findUnique({
-      where: { email: dto.email },
+      where: { email: normalizeEmail(dto.email) },
     });
     if (!user) {
-      throw new NotFoundException(`No user found with email ${dto.email}`);
+      // Deliberately generic: do not leak whether an account exists
+      throw new NotFoundException('User not found');
     }
 
     // Prevent owner from being re-added or duplicated

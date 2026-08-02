@@ -18,7 +18,8 @@ export const envSchema = z
         1,
         'JWT_SECRET is required — generate one with: openssl rand -base64 48',
       ),
-    JWT_EXPIRES_IN: z.string().default('7d'),
+    JWT_EXPIRES_IN: z.string().default('15m'),
+    REFRESH_TOKEN_EXPIRES_IN: z.string().default('30d'),
     PORT: z.coerce.number().int().positive().default(3000),
     LOG_LEVEL: z
       .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
