@@ -20,6 +20,9 @@ export const envSchema = z
       ),
     JWT_EXPIRES_IN: z.string().default('7d'),
     PORT: z.coerce.number().int().positive().default(3000),
+    LOG_LEVEL: z
+      .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
+      .default('info'),
     CORS_ORIGINS: z.string().default('http://localhost:5173'),
     FRONTEND_URL: z.string().url().optional(),
   })

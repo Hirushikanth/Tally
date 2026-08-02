@@ -2,14 +2,32 @@ import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Logger } from 'nestjs-pino';
 import helmet from 'helmet';
+import { randomUUID } from 'node:crypto';
+import type { NextFunction, Request, Response } from 'express';
 import { AppModule } from './app.module';
-import { DomainErrorFilter } from './common/filters/domain-error.filter';
+
+type RequestWithId = Request & { id?: string };
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bufferLogs: true,
+  });
   const config = app.get(ConfigService);
   const nodeEnv = config.get<string>('NODE_ENV', 'development');
+
+  app.useLogger(app.get(Logger));
+
+  // Request ID: honor an inbound x-request-id, else generate one; echoed
+  // back on the response so clients can correlate logs with requests.
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const header = req.headers['x-request-id'];
+    const id = (Array.isArray(header) ? header[0] : header) ?? randomUUID();
+    (req as RequestWithId).id = id;
+    res.setHeader('x-request-id', id);
+    next();
+  });
 
   app.use(helmet({ hsts: nodeEnv === 'production' }));
   app.useBodyParser('json', { limit: '100kb' });
@@ -27,7 +45,6 @@ async function bootstrap() {
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
   );
-  app.useGlobalFilters(new DomainErrorFilter());
 
   app.enableShutdownHooks();
   app.getHttpServer().requestTimeout = 30_000;

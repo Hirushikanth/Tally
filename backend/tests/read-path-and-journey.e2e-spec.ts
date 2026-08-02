@@ -4,7 +4,6 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 const supertest = require('supertest') as (app: unknown) => import('supertest').SuperTest<import('supertest').Test>;
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/common/prisma/prisma.service';
-import { DomainErrorFilter } from '../src/common/filters/domain-error.filter';
 
 /**
  * Phase 9 E2E: full user journey + read path (balances, ledger, settlements,
@@ -43,7 +42,6 @@ describe('Phase 9 — Full Journey & Read Path E2E', () => {
     app.useGlobalPipes(
       new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
     );
-    app.useGlobalFilters(new DomainErrorFilter());
     await app.init();
 
     prisma = moduleFixture.get<PrismaService>(PrismaService);
