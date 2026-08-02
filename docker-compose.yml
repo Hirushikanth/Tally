@@ -1,0 +1,77 @@
+# Local full-stack smoke: Postgres + API + nginx-served SPA.
+#
+#   docker compose up --build -d
+#   curl -s localhost:8080/api/health        # proxied API liveness
+#   curl -s localhost:8080/                  # SPA
+#
+# The `migrate` service applies prisma migrations against the local DB before
+# the API starts (same image, different command) — mirrors CI/CD ordering.
+
+name: tally
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: tally
+      POSTGRES_PASSWORD: tally
+      POSTGRES_DB: tally
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432" # host port moved off 5432 to avoid the local dev Postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tally -d tally"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://tally:tally@db:5432/tally
+    command: ["node", "node_modules/prisma/build/index.js", "migrate", "deploy"]
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://tally:tally@db:5432/tally
+      # >= 32 chars because NODE_ENV=production refuses to boot otherwise.
+      JWT_SECRET: compose-local-secret-change-me-1234567890abcdef
+      CORS_ORIGINS: http://localhost:8080
+      LOG_LEVEL: info
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      BACKEND_UPSTREAM: http://backend:3000
+    ports:
+      - "8080:80"
+
+volumes:
+  db-data:

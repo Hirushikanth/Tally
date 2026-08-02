@@ -747,10 +747,69 @@ deployment steps.
 
 ```bash
 docker compose up --build -d   # full stack smoke locally
-curl -s localhost:8080/health
+curl -s localhost:8080/api/health     # liveness through the nginx /api proxy
+curl -s localhost:8080/api/health/ready
 curl -s localhost:8080/ | head   # SPA served
 # live smoke: register/login/create-trip against the deployed URL
 ```
+
+### Status — H10 complete (2026-08-03)
+
+- **Topology decision:** both options from task 2 are shipped and documented —
+  `docker-compose.yml` (nginx container, full self-host) for local smoke and
+  the recommended zero-ops stack (Vercel SPA + Render API + Neon) via
+  `frontend/vercel.json` + `render.yaml`. CI/CD (`deploy.yml`) works for both.
+- **Backend Dockerfile** (`backend/Dockerfile`): `node:22-alpine`, two stages.
+  Builder: `corepack enable` (pnpm pinned via `packageManager:
+  pnpm@10.33.2`) → `pnpm install --frozen-lockfile` → `prisma generate` →
+  `nest build` → `pnpm --filter backend deploy --prod --legacy /out` (prunes
+  to prod deps; `--legacy` needed because the workspace doesn't use
+  inject-workspace-packages). Runner: copies `/out`, runs
+  `node node_modules/prisma/build/index.js generate` against the bundled
+  schema (the CLI ships in the image via the `prisma` dependency — moved from
+  devDependencies so the deploy target can regenerate the client), runs as the
+  non-root `node` user, `HEALTHCHECK` hits `/health`, `ENV NODE_ENV=production`.
+  bcrypt@6 needs no compiler (ships musl/glibc prebuilds); no native build
+  tools in the image.
+- **Frontend Dockerfile** (`frontend/Dockerfile`): builder installs the
+  workspace + `pnpm --filter frontend build`; runner is `nginx:1.27-alpine`
+  with `frontend/nginx/default.conf.template` rendered via the image's
+  envsubst entrypoint (`BACKEND_UPSTREAM` env). Config: SPA fallback
+  `try_files $uri /index.html`, `/api/` proxied to the backend with the prefix
+  stripped (the backend has no global prefix), gzip, `immutable` cache for
+  hashed `/assets/`, `no-cache` for `index.html`.
+- **Platform configs**: `render.yaml` (node runtime, no rootDir — Render only
+  syncs the rootDir directory and pnpm needs `pnpm-workspace.yaml` at the repo
+  root; build = `cd backend && pnpm install --frozen-lockfile && pnpm exec
+  prisma generate && pnpm build`, start = `node dist/main`, `healthCheckPath:
+  /health`, secrets `sync: false`); `frontend/vercel.json` (rewrite `/api/:path*`
+  → Render URL — replace the placeholder with the real service URL);
+  `docker-compose.yml` (db + migrate + backend + frontend; `migrate` applies
+  `prisma migrate deploy` from the same image before the API starts; host ports
+  5433/8080 to avoid the local dev stack). Neon pooled-vs-owner role split is
+  documented in DEPLOYMENT.md (README already documents `app_runtime`).
+- **CI/CD** (`.github/workflows/deploy.yml`, on push to `main` + manual
+  dispatch): `prisma migrate deploy` (owner connection) → Render deploy via
+  API → poll `/health` → Vercel `--prod` → live smoke (register → trip →
+  shared-expense → ledger/balances). Secrets table in DEPLOYMENT.md.
+- **`start:prod` fix (task 6):** kept as `node dist/main` + ConfigModule (the
+  H1-approved mechanism) — ConfigModule loads `.env` itself and container
+  envs come from Docker/Render, so no `--env-file` flag is needed. Verified
+  with `NODE_ENV=production` + injected env: boots, `/health` + `/health/ready`
+  green. The prod image must run with `NODE_ENV=production` (it does — set in
+  the Dockerfile and render.yaml); without it the dev pino-pretty transport
+  (a devDependency) is missing and the process exits — by design, fail-fast.
+- **Verification done:** the exact prune pipeline was run locally (build →
+  `deploy --prod --legacy` → `prisma generate` in target → `node dist/main`):
+  `/health` + `/health/ready` green and the full smoke journey (register →
+  login → create trip → shared expense → ledger balances) passed against the
+  pruned output with `NODE_ENV=production`. `docker build`/`docker compose up`
+  and the live Render/Vercel/Neon deploy require Docker + account credentials,
+  which are not available on this machine — the DoD's "compose up locally" and
+  "real deploy once" items are the remaining manual steps (commands in
+  DEPLOYMENT.md and the H10 Verification block above).
+- **Green at hand-off:** `pnpm lint`, `pnpm test`, `pnpm --filter backend build`,
+  `pnpm --filter frontend build` all pass; frontend bundle check unchanged.
 
 ---
 

@@ -1,0 +1,26 @@
+# Build context is the repo root for both Dockerfiles (see docker-compose.yml).
+# Anything not listed here stays OUT of the build context.
+
+.git
+.gitignore
+.github
+
+node_modules
+.pnpm-store
+
+dist
+coverage
+.tsbuildinfo
+*.tsbuildinfo
+
+.env
+.env.*
+.env.local
+*.log
+.DS_Store
+
+.prettierrc
+eslint.config.mjs
+tsconfig*.json
+vitest.config.ts
+jest-*.json

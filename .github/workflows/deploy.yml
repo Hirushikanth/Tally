@@ -1,0 +1,106 @@
+# Deploys to production on every push to main:
+#   migrate (owner DB connection) -> API (Render) -> SPA (Vercel) -> live smoke.
+#
+# Prereqs:
+#   - main is protected: CI must pass on PRs before merge (the deploy relies
+#     on ci.yml having run green).
+#   - Secrets: RENDER_API_KEY, RENDER_SERVICE_ID, VERCEL_ORG_ID,
+#     VERCEL_PROJECT_ID, VERCEL_TOKEN, DATABASE_URL_OWNER, API_URL.
+#   See DEPLOYMENT.md for provisioning steps.
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply database migrations (owner connection)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_OWNER }}
+        run: pnpm --filter backend exec prisma migrate deploy
+
+      - name: Deploy API to Render
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+        run: |
+          curl -fsS -X POST \
+            "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{}'
+
+      - name: Wait for API health
+        env:
+          API_URL: ${{ secrets.API_URL }}
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS "$API_URL/health" > /dev/null 2>&1; then
+              echo "API healthy after $((i * 10))s"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "API did not become healthy within 10 minutes"
+          exit 1
+
+      - name: Deploy SPA to Vercel
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: npx vercel@latest --cwd frontend --prod --yes --token "$VERCEL_TOKEN"
+
+      - name: Smoke test live stack
+        env:
+          API_URL: ${{ secrets.API_URL }}
+        run: |
+          set -euo pipefail
+          EMAIL="smoke-$(date +%s)@example.com"
+          PASSWORD="smoke-pass-$(date +%s)"
+          TOKEN=$(curl -fsS -X POST "$API_URL/auth/register" \
+            -H 'Content-Type: application/json' \
+            -d "{\"name\":\"Smoke Test\",\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}" \
+            | jq -r .accessToken)
+          test -n "$TOKEN" && test "$TOKEN" != null
+          TRIP=$(curl -fsS -X POST "$API_URL/trips" \
+            -H "Authorization: Bearer $TOKEN" \
+            -H 'Content-Type: application/json' \
+            -d '{"name":"Smoke Trip"}')
+          TID=$(echo "$TRIP" | jq -r .id)
+          MID=$(echo "$TRIP" | jq -r '.members[0].id')
+          test -n "$TID" && test -n "$MID"
+          curl -fsS -X POST "$API_URL/trips/$TID/events/shared-expense" \
+            -H "Authorization: Bearer $TOKEN" \
+            -H 'Content-Type: application/json' \
+            -d "{\"amount\":100,\"payers\":[{\"memberId\":\"$MID\",\"amountPaid\":100}],\"split\":{\"method\":\"EQUAL\",\"participantIds\":[\"$MID\"]}}" \
+            > /dev/null
+          curl -fsS "$API_URL/trips/$TID/ledger/balances" \
+            -H "Authorization: Bearer $TOKEN" > /dev/null
+          echo "Smoke journey passed: register -> trip -> expense -> balances"

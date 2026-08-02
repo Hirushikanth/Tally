@@ -1,0 +1,46 @@
+# Render Blueprint for the Tally API.
+# Spec: https://render.com/docs/blueprint-spec
+#
+# Setup (one-time):
+#   render blueprint launch --file render.yaml   # or paste this file in the dashboard
+#   Then set the secrets (sync: false vars) in the dashboard / API:
+#     DATABASE_URL   — Neon pooled connection string (app_runtime role)
+#     JWT_SECRET     — openssl rand -base64 48
+#   CORS_ORIGINS / FRONTEND_URL must match the SPA origin (Vercel or the
+#   nginx container) — update the values below before first deploy.
+#
+# Migrations are NOT run here: CI/CD applies them with the owner connection
+# before triggering a deploy (see .github/workflows/deploy.yml + DEPLOYMENT.md).
+
+services:
+  - type: web
+    name: tally-api
+    runtime: node
+    plan: free
+    # No rootDir: Render only syncs the rootDir directory for node services,
+    # and pnpm needs pnpm-workspace.yaml + the lockfile at the repo root.
+    buildCommand: >-
+      cd backend &&
+      pnpm install --frozen-lockfile &&
+      pnpm exec prisma generate &&
+      pnpm build
+    startCommand: cd backend && node dist/main
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3000"
+      - key: LOG_LEVEL
+        value: info
+      # Replace with the SPA origin (Vercel project URL or nginx container).
+      - key: CORS_ORIGINS
+        value: https://tally-spa.vercel.app
+      - key: FRONTEND_URL
+        value: https://tally-spa.vercel.app
+      # Secrets — set manually, never commit values.
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
