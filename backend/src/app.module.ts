@@ -47,7 +47,13 @@ import { SettlementsModule } from './settlements/settlements.module';
       },
     }),
     ThrottlerModule.forRoot([
-      { name: 'default', ttl: 60_000, limit: 100 },
+      {
+        name: 'default',
+        ttl: 60_000,
+        limit: 100,
+        // Global DoS guard; disabled under test so e2e suites can run fast.
+        skipIf: () => process.env.NODE_ENV === 'test',
+      },
       {
         name: 'auth',
         ttl: 60_000,

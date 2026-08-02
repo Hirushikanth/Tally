@@ -50,14 +50,14 @@ export function TripDashboardPage() {
   // Find the current user's member record
   const myMember = trip.members.find((m) => m.userId === user?.id);
   const myBalance = balancesData?.balances.find((b) => b.userId === user?.id);
-  const totalSpent = events?.reduce((sum, e) => sum + e.amount, 0) ?? 0;
+  const totalSpent = events?.items.reduce((sum, e) => sum + e.amount, 0) ?? 0;
 
-  // Category breakdown from events
-  const categoryTotals = buildCategoryTotals(events ?? []);
+  // Category breakdown from events (first page)
+  const categoryTotals = buildCategoryTotals(events?.items ?? []);
   const maxCategory = Math.max(...Object.values(categoryTotals), 1);
 
   // Recent events (last 5)
-  const recentEvents = [...(events ?? [])]
+  const recentEvents = [...(events?.items ?? [])]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 5);
 
@@ -134,7 +134,7 @@ export function TripDashboardPage() {
         <GlassCard className="dashboard-panel">
           <div className="panel-header">
             <h3 className="panel-title">Recent expenses</h3>
-            <span className="panel-tag">{events?.length ?? 0} total</span>
+            <span className="panel-tag">{events?.total ?? 0} total</span>
           </div>
           {eventsLoading ? (
             <div style={{ padding: '32px 0', display: 'flex', justifyContent: 'center' }}>

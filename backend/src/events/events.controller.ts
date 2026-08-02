@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Post,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -12,6 +13,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RequireRole } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { AuthenticatedUser } from '../auth/jwt.strategy';
+import { PaginationQueryDto } from '../common/pagination/pagination.dto';
 import { EventsService } from './events.service';
 import {
   CreateSharedExpenseDto,
@@ -81,11 +83,14 @@ export class EventsController {
     return this.eventsService.createAdjustment(tripId, req.user.userId, dto);
   }
 
-  /** GET /trips/:tripId/events */
+  /** GET /trips/:tripId/events?page=1&pageSize=50 — paginated, newest first */
   @Get()
   @RequireRole(MemberRole.VIEWER)
-  getEvents(@Param('tripId') tripId: string) {
-    return this.eventsService.findTripEvents(tripId);
+  getEvents(
+    @Param('tripId') tripId: string,
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.eventsService.findTripEvents(tripId, query);
   }
 
   /** GET /trips/:tripId/events/:id */

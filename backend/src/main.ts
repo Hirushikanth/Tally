@@ -43,7 +43,11 @@ async function bootstrap() {
   app.set('trust proxy', nodeEnv === 'production' ? 1 : false);
 
   app.useGlobalPipes(
-    new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
   );
 
   app.enableShutdownHooks();

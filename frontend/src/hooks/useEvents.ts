@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { eventsApi } from '@/api/events';
 import type {
   CreateSharedExpenseDto,
@@ -6,15 +6,33 @@ import type {
   CreateCashMovementDto,
 } from '@/api/types';
 
+export const DEFAULT_PAGE_SIZE = 50;
+
 export const eventKeys = {
-  list: (tripId: string) => ['trips', tripId, 'events'] as const,
+  list: (tripId: string, page = 1, pageSize = DEFAULT_PAGE_SIZE) =>
+    ['trips', tripId, 'events', page, pageSize] as const,
+  infinite: (tripId: string) => ['trips', tripId, 'events', 'infinite'] as const,
   detail: (tripId: string, eventId: string) => ['trips', tripId, 'events', eventId] as const,
 };
 
+/** First page of events — used by the dashboard summary. */
 export function useEvents(tripId: string | null) {
   return useQuery({
     queryKey: eventKeys.list(tripId ?? ''),
-    queryFn: () => eventsApi.getEvents(tripId!),
+    queryFn: () => eventsApi.getEvents(tripId!, { page: 1, pageSize: DEFAULT_PAGE_SIZE }),
+    enabled: Boolean(tripId),
+  });
+}
+
+/** Load-more pagination — used by ExpensesPage. */
+export function useInfiniteEvents(tripId: string | null) {
+  return useInfiniteQuery({
+    queryKey: eventKeys.infinite(tripId ?? ''),
+    queryFn: ({ pageParam }) =>
+      eventsApi.getEvents(tripId!, { page: pageParam, pageSize: DEFAULT_PAGE_SIZE }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined,
     enabled: Boolean(tripId),
   });
 }
@@ -31,7 +49,7 @@ export function useEvent(tripId: string, eventId: string) {
 function useInvalidateAll(tripId: string) {
   const queryClient = useQueryClient();
   return () => {
-    queryClient.invalidateQueries({ queryKey: eventKeys.list(tripId) });
+    queryClient.invalidateQueries({ queryKey: ['trips', tripId, 'events'] });
     queryClient.invalidateQueries({ queryKey: ['trips', tripId, 'balances'] });
     queryClient.invalidateQueries({ queryKey: ['trips', tripId, 'suggestions'] });
   };

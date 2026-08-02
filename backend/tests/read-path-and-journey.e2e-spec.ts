@@ -40,7 +40,11 @@ describe('Phase 9 — Full Journey & Read Path E2E', () => {
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(
-      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
     );
     await app.init();
 
@@ -179,33 +183,104 @@ describe('Phase 9 — Full Journey & Read Path E2E', () => {
         .expect(200);
 
       expect(kasunLedger.body.currentBalance).toBe(7000);
-      expect(kasunLedger.body.entries).toHaveLength(2);
-      expect(kasunLedger.body.entries[0].amount).toBe(5000); // loan, newest
-      expect(kasunLedger.body.entries[0].runningBalance).toBe(7000);
-      expect(kasunLedger.body.entries[1].amount).toBe(2000); // expense
-      expect(kasunLedger.body.entries[1].runningBalance).toBe(2000);
+      expect(kasunLedger.body.items).toHaveLength(2);
+      expect(kasunLedger.body.total).toBe(2);
+      expect(kasunLedger.body.items[0].amount).toBe(5000); // loan, newest
+      expect(kasunLedger.body.items[0].runningBalance).toBe(7000);
+      expect(kasunLedger.body.items[1].amount).toBe(2000); // expense
+      expect(kasunLedger.body.items[1].runningBalance).toBe(2000);
 
-      // 6. Unified trip ledger: 5 + 2 + 2 = 9 postings
+      // 6. Unified trip ledger: 5 + 2 + 2 = 9 postings (paginated shape)
       const tripLedger = await supertest(app.getHttpServer())
         .get(`/trips/${tripId}/ledger`)
         .set('Authorization', `Bearer ${ownerToken}`)
         .expect(200);
-      expect(tripLedger.body).toHaveLength(9);
+      expect(tripLedger.body.items).toHaveLength(9);
+      expect(tripLedger.body.total).toBe(9);
 
-      // 7. Events listing shows all three events
+      // 7. Events listing shows all three events (paginated shape)
       const events = await supertest(app.getHttpServer())
         .get(`/trips/${tripId}/events`)
         .set('Authorization', `Bearer ${ownerToken}`)
         .expect(200);
-      expect(events.body).toHaveLength(3);
-      expect(events.body.map((e: { type: string }) => e.type)).toEqual(
+      expect(events.body.items).toHaveLength(3);
+      expect(events.body.total).toBe(3);
+      expect(events.body.items.map((e: { type: string }) => e.type)).toEqual(
         expect.arrayContaining(['SHARED_EXPENSE', 'LOAN', 'SETTLEMENT']),
       );
     });
   });
 
-  // ─── 2. Settlement suggestions: read-only, zero writes (DoD §14.5) ────────
+  // ─── 2. Pagination & input normalization (H5) ──────────────────────────────
 
+  describe('H5 — pagination and trimming', () => {
+    it('pages the member ledger with exact running balances on every page', async () => {
+      // Three money movements for Kasun: +1000 (oldest), +2500, -1500 (newest)
+      await supertest(app.getHttpServer())
+        .post(`/trips/${tripId}/events/loan`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({
+          lenderMemberId: kasunMemberId,
+          borrowerMemberId: amalMemberId,
+          amount: 1000,
+        })
+        .expect(201);
+      await supertest(app.getHttpServer())
+        .post(`/trips/${tripId}/events/loan`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({
+          lenderMemberId: kasunMemberId,
+          borrowerMemberId: amalMemberId,
+          amount: 2500,
+        })
+        .expect(201);
+      await supertest(app.getHttpServer())
+        .post(`/trips/${tripId}/events/cash-movement`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({
+          cashPayerMemberId: hirushiMemberId,
+          cashReceiverMemberId: kasunMemberId,
+          amount: 1500,
+          type: 'REPAYMENT',
+        })
+        .expect(201);
+
+      // Page 1 (newest first): +2500 at running 3500; +1000 at running 1000
+      const pageOne = await supertest(app.getHttpServer())
+        .get(`/trips/${tripId}/ledger/members/${kasunMemberId}?page=1&pageSize=2`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .expect(200);
+      expect(pageOne.body.total).toBe(3);
+      expect(pageOne.body.currentBalance).toBe(2000);
+      expect(pageOne.body.items).toHaveLength(2);
+      expect(pageOne.body.items[0].amount).toBe(2500);
+      expect(pageOne.body.items[0].runningBalance).toBe(3500);
+      expect(pageOne.body.items[1].amount).toBe(1000);
+      expect(pageOne.body.items[1].runningBalance).toBe(1000);
+
+      // Page 2: newest (and only) entry -1500 at running 2000
+      const pageTwo = await supertest(app.getHttpServer())
+        .get(`/trips/${tripId}/ledger/members/${kasunMemberId}?page=2&pageSize=2`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .expect(200);
+      expect(pageTwo.body.items).toHaveLength(1);
+      expect(pageTwo.body.items[0].amount).toBe(-1500);
+      expect(pageTwo.body.items[0].runningBalance).toBe(2000);
+    });
+
+    it('trims trip name and description on create', async () => {
+      const res = await supertest(app.getHttpServer())
+        .post('/trips')
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({ name: '  Goa Getaway  ', description: '  Beach trip  ' })
+        .expect(201);
+
+      expect(res.body.name).toBe('Goa Getaway');
+      expect(res.body.description).toBe('Beach trip');
+    });
+  });
+
+  // ─── 3. Settlement suggestions: read-only, zero writes (DoD §14.5) ────────
   describe('GET /trips/:tripId/settlements/suggestions', () => {
     it('computes suggestions and performs ZERO writes to Posting/BusinessEvent', async () => {
       await supertest(app.getHttpServer())

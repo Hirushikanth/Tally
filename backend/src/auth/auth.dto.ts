@@ -5,6 +5,9 @@ import { normalizeEmail } from './auth.service';
 export class RegisterDto {
   @IsString()
   @IsNotEmpty()
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   name: string;
 
   @IsEmail()

@@ -5,12 +5,14 @@ import {
   HttpStatus,
   Param,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { MemberRole } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RequireRole } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
+import { PaginationQueryDto } from '../common/pagination/pagination.dto';
 import { LedgerService } from './ledger.service';
 
 @Controller('trips/:tripId/ledger')
@@ -25,21 +27,25 @@ export class LedgerController {
     return this.ledgerService.getTripBalances(tripId);
   }
 
-  /** GET /trips/:tripId/ledger/members/:memberId — ledger history for a specific member */
+  /** GET /trips/:tripId/ledger/members/:memberId — paginated ledger history for a specific member */
   @Get('members/:memberId')
   @RequireRole(MemberRole.VIEWER)
   getMemberLedger(
     @Param('tripId') tripId: string,
     @Param('memberId') memberId: string,
+    @Query() query: PaginationQueryDto,
   ) {
-    return this.ledgerService.getMemberLedger(tripId, memberId);
+    return this.ledgerService.getMemberLedger(tripId, memberId, query);
   }
 
-  /** GET /trips/:tripId/ledger — full trip unified journal */
+  /** GET /trips/:tripId/ledger — paginated full trip unified journal */
   @Get()
   @RequireRole(MemberRole.VIEWER)
-  getTripLedger(@Param('tripId') tripId: string) {
-    return this.ledgerService.getTripLedger(tripId);
+  getTripLedger(
+    @Param('tripId') tripId: string,
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.ledgerService.getTripLedger(tripId, query);
   }
 
   /** POST /trips/:tripId/ledger/rebuild-snapshots — trigger snapshot cache rebuild (ADMIN only) */

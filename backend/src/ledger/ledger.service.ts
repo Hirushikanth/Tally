@@ -1,5 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../common/prisma/prisma.service';
+import {
+  resolvePagination,
+  paginate,
+  Paginated,
+} from '../common/pagination/paginate';
+import { PaginationQueryDto } from '../common/pagination/pagination.dto';
 
 export interface MemberBalanceDto {
   memberId: string;
@@ -36,13 +43,6 @@ export interface MemberLedgerEntryDto {
     };
     refundOfId: string | null;
   };
-}
-
-export interface MemberLedgerResponse {
-  memberId: string;
-  userName: string;
-  currentBalance: number;
-  entries: MemberLedgerEntryDto[];
 }
 
 @Injectable()
@@ -108,11 +108,18 @@ export class LedgerService {
   /**
    * GET /trips/:tripId/ledger/members/:memberId
    * Returns a member's ledger: all postings where memberId = X, ordered by time with running balance.
+   * Paginated — running balances stay correct across pages (the sum of all
+   * postings before the window is fetched and accumulated from).
    */
   async getMemberLedger(
     tripId: string,
     memberId: string,
-  ): Promise<MemberLedgerResponse> {
+    query: PaginationQueryDto = {},
+  ): Promise<Paginated<MemberLedgerEntryDto> & {
+    memberId: string;
+    userName: string;
+    currentBalance: number;
+  }> {
     const member = await this.prisma.member.findFirst({
       where: { id: memberId, tripId },
       include: {
@@ -130,25 +137,51 @@ export class LedgerService {
       throw new NotFoundException('Member not found in this trip');
     }
 
-    const postings = await this.prisma.posting.findMany({
-      where: { memberId },
-      orderBy: { createdAt: 'asc' },
-      include: {
-        businessEvent: {
-          include: {
-            createdBy: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
+    const { page, pageSize, skip } = resolvePagination(query);
+    const orderBy: Prisma.PostingOrderByWithRelationInput[] = [
+      { createdAt: 'asc' },
+      { id: 'asc' },
+    ];
+
+    const [total, postings, priorPostings, finalSum] = await Promise.all([
+      this.prisma.posting.count({ where: { memberId } }),
+      this.prisma.posting.findMany({
+        where: { memberId },
+        orderBy,
+        skip,
+        take: pageSize,
+        include: {
+          businessEvent: {
+            include: {
+              createdBy: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
               },
             },
           },
         },
-      },
-    });
+      }),
+      // Amounts of every posting strictly before this page's window, so
+      // runningBalance stays exact no matter which page is requested.
+      // take: 0 is valid and returns an empty array when skip === 0.
+      this.prisma.posting.findMany({
+        where: { memberId },
+        orderBy,
+        select: { amount: true },
+        take: skip,
+      }),
+      // True current position of the member — independent of the page window.
+      this.prisma.posting.aggregate({
+        where: { memberId },
+        _sum: { amount: true },
+      }),
+    ]);
 
-    let runningBalance = 0;
+    const currentBalance = finalSum._sum.amount ?? 0;
+    let runningBalance = priorPostings.reduce((sum, p) => sum + p.amount, 0);
     const entries: MemberLedgerEntryDto[] = postings.map((posting) => {
       runningBalance += posting.amount;
       return {
@@ -170,12 +203,11 @@ export class LedgerService {
       };
     });
 
-    // Return entries in reverse chronological order (newest first)
     return {
       memberId: member.id,
       userName: member.user.name,
-      currentBalance: runningBalance,
-      entries: entries.reverse(),
+      currentBalance,
+      ...paginate(entries.reverse(), total, page, pageSize),
     };
   }
 
@@ -183,7 +215,10 @@ export class LedgerService {
    * GET /trips/:tripId/ledger
    * Returns the unified journal for a trip (all postings ordered newest first).
    */
-  async getTripLedger(tripId: string) {
+  async getTripLedger(
+    tripId: string,
+    query: PaginationQueryDto = {},
+  ): Promise<Paginated<unknown>> {
     const trip = await this.prisma.trip.findUnique({
       where: { id: tripId },
       select: { id: true },
@@ -193,34 +228,43 @@ export class LedgerService {
       throw new NotFoundException('Trip not found');
     }
 
-    return this.prisma.posting.findMany({
-      where: { member: { tripId } },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        member: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
+    const { page, pageSize, skip } = resolvePagination(query);
+
+    const [total, items] = await Promise.all([
+      this.prisma.posting.count({ where: { member: { tripId } } }),
+      this.prisma.posting.findMany({
+        where: { member: { tripId } },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
+        include: {
+          member: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+          },
+          businessEvent: {
+            include: {
+              createdBy: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
               },
             },
           },
         },
-        businessEvent: {
-          include: {
-            createdBy: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-          },
-        },
-      },
-    });
+      }),
+    ]);
+
+    return paginate(items, total, page, pageSize);
   }
 
   /**

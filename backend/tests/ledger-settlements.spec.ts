@@ -211,6 +211,8 @@ describe('Phase 5 — Read Path & Debt Simplification', () => {
         posting: {
           groupBy: jest.fn(),
           findMany: jest.fn(),
+          count: jest.fn(),
+          aggregate: jest.fn(),
         },
         balanceSnapshot: {
           upsert: jest.fn(),
@@ -277,16 +279,20 @@ describe('Phase 5 — Read Path & Debt Simplification', () => {
     });
 
     describe('getMemberLedger', () => {
-      it('returns postings in reverse chronological order with accurately computed running balances', async () => {
+      it('returns paginated postings in reverse chronological order with accurately computed running balances', async () => {
         mockPrisma.member.findFirst.mockResolvedValue({
           id: 'm1',
           user: { id: 'u1', name: 'Alice', email: 'alice@test.com' },
+        });
+        mockPrisma.posting.count.mockResolvedValue(2);
+        mockPrisma.posting.aggregate.mockResolvedValue({
+          _sum: { amount: 6000 },
         });
 
         const createdDate1 = new Date('2026-01-01T10:00:00Z');
         const createdDate2 = new Date('2026-01-02T10:00:00Z');
 
-        mockPrisma.posting.findMany.mockResolvedValue([
+        const postings = [
           {
             id: 'p1',
             amount: 8000,
@@ -319,20 +325,68 @@ describe('Phase 5 — Read Path & Debt Simplification', () => {
               refundOfId: null,
             },
           },
-        ]);
+        ];
+        // First findMany = the page window; second = prior-sum probe (take: 0 on page 1).
+        mockPrisma.posting.findMany
+          .mockResolvedValueOnce(postings)
+          .mockResolvedValueOnce([]);
 
         const result = await service.getMemberLedger('trip-1', 'm1');
 
         expect(result.memberId).toBe('m1');
         expect(result.userName).toBe('Alice');
         expect(result.currentBalance).toBe(6000);
+        expect(result.total).toBe(2);
+        expect(result.page).toBe(1);
+        expect(result.pageSize).toBe(50);
 
-        // Result entries are reversed (newest first)
-        expect(result.entries).toHaveLength(2);
-        expect(result.entries[0].postingId).toBe('p2');
-        expect(result.entries[0].runningBalance).toBe(6000);
-        expect(result.entries[1].postingId).toBe('p1');
-        expect(result.entries[1].runningBalance).toBe(8000);
+        // Result items are reversed (newest first)
+        expect(result.items).toHaveLength(2);
+        expect(result.items[0].postingId).toBe('p2');
+        expect(result.items[0].runningBalance).toBe(6000);
+        expect(result.items[1].postingId).toBe('p1');
+        expect(result.items[1].runningBalance).toBe(8000);
+      });
+
+      it('keeps running balances exact on later pages (prior-sum baseline)', async () => {
+        mockPrisma.member.findFirst.mockResolvedValue({
+          id: 'm1',
+          user: { id: 'u1', name: 'Alice', email: 'alice@test.com' },
+        });
+        mockPrisma.posting.count.mockResolvedValue(3);
+        mockPrisma.posting.aggregate.mockResolvedValue({
+          _sum: { amount: 7000 },
+        });
+
+        const created = new Date('2026-01-01T10:00:00Z');
+        mockPrisma.posting.findMany
+          .mockResolvedValueOnce([
+            // Page 2 window: the two newest postings
+            {
+              id: 'p2',
+              amount: -2000,
+              createdAt: created,
+              businessEvent: { id: 'e2', type: 'SHARED_EXPENSE', notes: null, category: null, amount: 4000, createdAt: created, createdById: 'u1', createdBy: { id: 'u1', name: 'Alice', email: 'a@t.com' }, refundOfId: null },
+            },
+            {
+              id: 'p3',
+              amount: 1000,
+              createdAt: created,
+              businessEvent: { id: 'e3', type: 'LOAN', notes: null, category: null, amount: 1000, createdAt: created, createdById: 'u1', createdBy: { id: 'u1', name: 'Alice', email: 'a@t.com' }, refundOfId: null },
+            },
+          ])
+          // Prior sum probe: one older posting of +8000 sits before the window
+          .mockResolvedValueOnce([{ amount: 8000 }]);
+
+        const result = await service.getMemberLedger('trip-1', 'm1', {
+          page: 2,
+          pageSize: 2,
+        });
+
+        expect(result.items).toHaveLength(2);
+        expect(result.items[0].runningBalance).toBe(7000); // 8000 - 2000 + 1000 (p3, newest)
+        expect(result.items[1].runningBalance).toBe(6000); // 8000 - 2000 (p2)
+        expect(result.currentBalance).toBe(7000);
       });
 
       it('throws NotFoundException when member does not exist in trip', async () => {

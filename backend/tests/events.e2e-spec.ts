@@ -38,7 +38,11 @@ describe('Phase 4 — Business Event APIs E2E', () => {
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(
-      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
     );
     await app.init();
 
@@ -227,6 +231,103 @@ describe('Phase 4 — Business Event APIs E2E', () => {
           },
         })
         .expect(403);
+    });
+
+    it('accepts a PERCENTAGE split whose shares sum to 100', async () => {
+      const res = await supertest(app.getHttpServer())
+        .post(`/trips/${tripId}/events/shared-expense`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({
+          amount: 10000,
+          payers: [{ memberId: hirushiMemberId, amountPaid: 10000 }],
+          split: {
+            method: 'PERCENTAGE',
+            shares: [
+              { memberId: hirushiMemberId, percent: 50 },
+              { memberId: kasunMemberId, percent: 50 },
+            ],
+          },
+        })
+        .expect(201);
+
+      expect(res.body.type).toBe('SHARED_EXPENSE');
+    });
+
+    it('returns 400 for an unknown split method', async () => {
+      await supertest(app.getHttpServer())
+        .post(`/trips/${tripId}/events/shared-expense`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({
+          amount: 5000,
+          payers: [{ memberId: hirushiMemberId, amountPaid: 5000 }],
+          split: {
+            method: 'SPLIT_EVERYTHING',
+            participantIds: [hirushiMemberId, kasunMemberId],
+          },
+        })
+        .expect(400);
+    });
+
+    it('returns 400 for a split missing its method discriminator', async () => {
+      await supertest(app.getHttpServer())
+        .post(`/trips/${tripId}/events/shared-expense`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({
+          amount: 5000,
+          payers: [{ memberId: hirushiMemberId, amountPaid: 5000 }],
+          split: { participantIds: [hirushiMemberId] },
+        })
+        .expect(400);
+    });
+
+    it('returns 400 for percentage shares that do not sum to 100', async () => {
+      await supertest(app.getHttpServer())
+        .post(`/trips/${tripId}/events/shared-expense`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({
+          amount: 5000,
+          payers: [{ memberId: hirushiMemberId, amountPaid: 5000 }],
+          split: {
+            method: 'PERCENTAGE',
+            shares: [{ memberId: hirushiMemberId, percent: 90 }],
+          },
+        })
+        .expect(400);
+    });
+
+    it('returns 400 when the split payload does not match its method', async () => {
+      await supertest(app.getHttpServer())
+        .post(`/trips/${tripId}/events/shared-expense`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({
+          amount: 5000,
+          payers: [{ memberId: hirushiMemberId, amountPaid: 5000 }],
+          split: {
+            method: 'EQUAL',
+            shares: [{ memberId: hirushiMemberId, percent: 100 }],
+          },
+        })
+        .expect(400);
+    });
+
+    it('trims notes and category on create', async () => {
+      const res = await supertest(app.getHttpServer())
+        .post(`/trips/${tripId}/events/shared-expense`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({
+          amount: 5000,
+          payers: [{ memberId: hirushiMemberId, amountPaid: 5000 }],
+          split: {
+            method: 'EQUAL',
+            participantIds: [hirushiMemberId],
+          },
+          category: '  Hotel  ',
+          notes: '  Beach resort stay  ',
+        })
+        .expect(201);
+
+      expect(res.body.category).toBe('Hotel');
+      expect(res.body.notes).toBe('Beach resort stay');
     });
   });
 
@@ -451,7 +552,7 @@ describe('Phase 4 — Business Event APIs E2E', () => {
   // ─── 6. Event Retrieval Endpoints ──────────────────────────────────────────
 
   describe('GET /trips/:tripId/events', () => {
-    it('returns all events for a trip with postings and creator info', async () => {
+    it('returns a paginated list of events with postings and creator info', async () => {
       await supertest(app.getHttpServer())
         .post(`/trips/${tripId}/events/loan`)
         .set('Authorization', `Bearer ${memberToken}`)
@@ -466,9 +567,78 @@ describe('Phase 4 — Business Event APIs E2E', () => {
         .set('Authorization', `Bearer ${viewerToken}`)
         .expect(200);
 
-      expect(res.body).toHaveLength(1);
-      expect(res.body[0].type).toBe('LOAN');
-      expect(res.body[0].postings).toHaveLength(2);
+      expect(res.body.items).toHaveLength(1);
+      expect(res.body.total).toBe(1);
+      expect(res.body.page).toBe(1);
+      expect(res.body.pageSize).toBe(50);
+      expect(res.body.items[0].type).toBe('LOAN');
+      expect(res.body.items[0].postings).toHaveLength(2);
+    });
+
+    it('caps pageSize at 200 and still reports the true total', async () => {
+      for (let i = 0; i < 2; i++) {
+        await supertest(app.getHttpServer())
+          .post(`/trips/${tripId}/events/loan`)
+          .set('Authorization', `Bearer ${memberToken}`)
+          .send({
+            lenderMemberId: kasunMemberId,
+            borrowerMemberId: amalMemberId,
+            amount: 1000,
+          })
+          .expect(201);
+      }
+
+      const res = await supertest(app.getHttpServer())
+        .get(`/trips/${tripId}/events?pageSize=300`)
+        .set('Authorization', `Bearer ${viewerToken}`)
+        .expect(200);
+
+      expect(res.body.items).toHaveLength(2);
+      expect(res.body.pageSize).toBe(200);
+      expect(res.body.total).toBe(2);
+    });
+
+    it('pages through events and exposes totalPages', async () => {
+      for (let i = 0; i < 3; i++) {
+        await supertest(app.getHttpServer())
+          .post(`/trips/${tripId}/events/loan`)
+          .set('Authorization', `Bearer ${memberToken}`)
+          .send({
+            lenderMemberId: kasunMemberId,
+            borrowerMemberId: amalMemberId,
+            amount: 1000 + i,
+          })
+          .expect(201);
+      }
+
+      const pageOne = await supertest(app.getHttpServer())
+        .get(`/trips/${tripId}/events?page=1&pageSize=2`)
+        .set('Authorization', `Bearer ${viewerToken}`)
+        .expect(200);
+      expect(pageOne.body.items).toHaveLength(2);
+      expect(pageOne.body.page).toBe(1);
+      expect(pageOne.body.totalPages).toBe(2);
+
+      const pageTwo = await supertest(app.getHttpServer())
+        .get(`/trips/${tripId}/events?page=2&pageSize=2`)
+        .set('Authorization', `Bearer ${viewerToken}`)
+        .expect(200);
+      expect(pageTwo.body.items).toHaveLength(1);
+      expect(pageTwo.body.page).toBe(2);
+
+      // No overlap between pages
+      const ids = new Set([
+        ...pageOne.body.items.map((e: { id: string }) => e.id),
+        ...pageTwo.body.items.map((e: { id: string }) => e.id),
+      ]);
+      expect(ids.size).toBe(3);
+    });
+
+    it('rejects a non-numeric page param with 400', async () => {
+      await supertest(app.getHttpServer())
+        .get(`/trips/${tripId}/events?page=abc`)
+        .set('Authorization', `Bearer ${viewerToken}`)
+        .expect(400);
     });
   });
 });

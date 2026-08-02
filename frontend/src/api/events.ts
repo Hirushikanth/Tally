@@ -6,6 +6,8 @@ import type {
   CreateCashMovementDto,
   CreateRefundDto,
   CreateAdjustmentDto,
+  Paginated,
+  PaginationParams,
 } from './types';
 
 export const eventsApi = {
@@ -49,8 +51,14 @@ export const eventsApi = {
     return data;
   },
 
-  getEvents: async (tripId: string): Promise<BusinessEvent[]> => {
-    const { data } = await apiClient.get<BusinessEvent[]>(`/trips/${tripId}/events`);
+  getEvents: async (
+    tripId: string,
+    params: PaginationParams = {},
+  ): Promise<Paginated<BusinessEvent>> => {
+    const { data } = await apiClient.get<Paginated<BusinessEvent>>(
+      `/trips/${tripId}/events`,
+      { params },
+    );
     return data;
   },
 

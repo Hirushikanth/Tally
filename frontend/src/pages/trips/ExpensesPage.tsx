@@ -1,5 +1,5 @@
 import { useParams, Navigate } from 'react-router-dom';
-import { useEvents } from '@/hooks/useEvents';
+import { useInfiniteEvents } from '@/hooks/useEvents';
 import { useTrip } from '@/hooks/useTrips';
 import { MonoAmount } from '@/components/common/MonoAmount';
 import { GlassCard } from '@/components/common/GlassCard';
@@ -16,7 +16,13 @@ export function ExpensesPage() {
   const { tripId } = useParams<{ tripId: string }>();
   const user = useAuthStore((s) => s.user);
   const { data: trip } = useTrip(tripId ?? null);
-  const { data: events, isLoading } = useEvents(tripId ?? null);
+  const {
+    data: eventsData,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useInfiniteEvents(tripId ?? null);
   const addExpenseModalOpen = useUIStore((s) => s.addExpenseModalOpen);
   const setAddExpenseModalOpen = useUIStore((s) => s.setAddExpenseModalOpen);
   const addLoanModalOpen = useUIStore((s) => s.addLoanModalOpen);
@@ -28,7 +34,10 @@ export function ExpensesPage() {
 
   const myMember = trip?.members.find((m) => m.userId === user?.id);
 
-  const sortedEvents = [...(events ?? [])].sort(
+  const events = eventsData?.pages.flatMap((page) => page.items) ?? [];
+  const totalEvents = eventsData?.pages[0]?.total ?? 0;
+
+  const sortedEvents = [...events].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
 
@@ -38,7 +47,7 @@ export function ExpensesPage() {
         <div>
           <h1 className="expenses-title">All Expenses</h1>
           <p className="expenses-sub">
-            {events?.length ?? 0} expense{events?.length !== 1 ? 's' : ''} in {trip?.name ?? '…'}
+            {totalEvents} expense{totalEvents !== 1 ? 's' : ''} in {trip?.name ?? '…'}
           </p>
         </div>
         <div className="expenses-actions">
@@ -67,29 +76,43 @@ export function ExpensesPage() {
             </Button>
           </div>
         ) : (
-          sortedEvents.map((event) => (
-            <div key={event.id} className="expenses-row">
-              <div className="expenses-icon">{categoryIcon(event.category)}</div>
-              <div className="expenses-main">
-                <div className="expenses-row-title">
-                  {event.notes || eventTypeLabel(event.type)}
+          <>
+            {sortedEvents.map((event) => (
+              <div key={event.id} className="expenses-row">
+                <div className="expenses-icon">{categoryIcon(event.category)}</div>
+                <div className="expenses-main">
+                  <div className="expenses-row-title">
+                    {event.notes || eventTypeLabel(event.type)}
+                  </div>
+                  <div className="expenses-row-meta">
+                    {event.category && (
+                      <span className="badge" style={{ fontSize: 11, marginRight: 6 }}>
+                        {event.category}
+                      </span>
+                    )}
+                    <span>{eventTypeLabel(event.type)}</span>
+                    <span className="expenses-sep">·</span>
+                    <span>by {event.createdBy?.name ?? 'Unknown'}</span>
+                    <span className="expenses-sep">·</span>
+                    <span>{formatDate(event.createdAt)}</span>
+                  </div>
                 </div>
-                <div className="expenses-row-meta">
-                  {event.category && (
-                    <span className="badge" style={{ fontSize: 11, marginRight: 6 }}>
-                      {event.category}
-                    </span>
-                  )}
-                  <span>{eventTypeLabel(event.type)}</span>
-                  <span className="expenses-sep">·</span>
-                  <span>by {event.createdBy?.name ?? 'Unknown'}</span>
-                  <span className="expenses-sep">·</span>
-                  <span>{formatDate(event.createdAt)}</span>
-                </div>
+                <MonoAmount value={event.amount} currency={trip?.currency ?? 'LKR'} />
               </div>
-              <MonoAmount value={event.amount} currency={trip?.currency ?? 'LKR'} />
-            </div>
-          ))
+            ))}
+            {hasNextPage && (
+              <div className="expenses-load-more">
+                <Button
+                  variant="ghost"
+                  fullWidth
+                  loading={isFetchingNextPage}
+                  onClick={() => fetchNextPage()}
+                >
+                  Load more
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </GlassCard>
 

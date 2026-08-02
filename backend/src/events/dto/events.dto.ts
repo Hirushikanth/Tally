@@ -7,13 +7,22 @@ import {
   ValidateNested,
   IsEnum,
   IsNotEmpty,
+  IsObject,
   ArrayMinSize,
   IsIn,
   IsNumber,
   Min,
+  Validate,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { BusinessEventType } from '@prisma/client';
+
+/** Trim a string value if present; non-strings are left for IsString to reject. */
+function trimIfString(value: unknown): unknown {
+  return typeof value === 'string' ? value.trim() : value;
+}
 
 export class PayerDto {
   @IsString()
@@ -73,6 +82,23 @@ export class EqualSplitDto {
   participantIds: string[];
 }
 
+@ValidatorConstraint({ name: 'percentageSharesSumTo100', async: false })
+class PercentageSharesSumTo100Constraint
+  implements ValidatorConstraintInterface
+{
+  validate(shares: PercentageShareDto[]): boolean {
+    if (!Array.isArray(shares)) {
+      return false;
+    }
+    const total = shares.reduce((sum, s) => sum + s.percent, 0);
+    return Math.abs(total - 100) <= 1e-9;
+  }
+
+  defaultMessage(): string {
+    return 'percentage shares must sum to 100';
+  }
+}
+
 export class PercentageSplitDto {
   @IsEnum(SplitMethod)
   method: SplitMethod.PERCENTAGE;
@@ -81,6 +107,7 @@ export class PercentageSplitDto {
   @ValidateNested({ each: true })
   @Type(() => PercentageShareDto)
   @ArrayMinSize(1)
+  @Validate(PercentageSharesSumTo100Constraint)
   shares: PercentageShareDto[];
 }
 
@@ -106,6 +133,28 @@ export class WeightSplitDto {
   shares: WeightShareDto[];
 }
 
+export type SplitDto =
+  | EqualSplitDto
+  | PercentageSplitDto
+  | ExactSplitDto
+  | WeightSplitDto;
+
+@ValidatorConstraint({ name: 'splitMethodKnown', async: false })
+class SplitMethodKnownConstraint implements ValidatorConstraintInterface {
+  validate(split: { method?: unknown }): boolean {
+    return (
+      typeof split === 'object' &&
+      split !== null &&
+      typeof split.method === 'string' &&
+      Object.values(SplitMethod).includes(split.method as SplitMethod)
+    );
+  }
+
+  defaultMessage(): string {
+    return 'split must declare a known method (EQUAL, PERCENTAGE, EXACT, CUSTOM, SHARES)';
+  }
+}
+
 export class CreateSharedExpenseDto {
   @IsInt()
   @IsPositive()
@@ -117,15 +166,33 @@ export class CreateSharedExpenseDto {
   @ArrayMinSize(1)
   payers: PayerDto[];
 
+  @IsObject()
   @IsNotEmpty()
-  split: any; // Checked at runtime / service layer based on method
+  @Validate(SplitMethodKnownConstraint)
+  @ValidateNested()
+  @Type(() => Object, {
+    keepDiscriminatorProperty: true,
+    discriminator: {
+      property: 'method',
+      subTypes: [
+        { value: EqualSplitDto, name: SplitMethod.EQUAL },
+        { value: PercentageSplitDto, name: SplitMethod.PERCENTAGE },
+        { value: ExactSplitDto, name: SplitMethod.EXACT },
+        { value: ExactSplitDto, name: SplitMethod.CUSTOM },
+        { value: WeightSplitDto, name: SplitMethod.SHARES },
+      ],
+    },
+  })
+  split: SplitDto;
 
   @IsOptional()
   @IsString()
+  @Transform(({ value }) => trimIfString(value))
   category?: string;
 
   @IsOptional()
   @IsString()
+  @Transform(({ value }) => trimIfString(value))
   notes?: string;
 }
 
@@ -144,10 +211,12 @@ export class CreateLoanDto {
 
   @IsOptional()
   @IsString()
+  @Transform(({ value }) => trimIfString(value))
   category?: string;
 
   @IsOptional()
   @IsString()
+  @Transform(({ value }) => trimIfString(value))
   notes?: string;
 }
 
@@ -172,10 +241,12 @@ export class CreateCashMovementDto {
 
   @IsOptional()
   @IsString()
+  @Transform(({ value }) => trimIfString(value))
   category?: string;
 
   @IsOptional()
   @IsString()
+  @Transform(({ value }) => trimIfString(value))
   notes?: string;
 }
 
@@ -190,10 +261,12 @@ export class CreateRefundDto {
 
   @IsOptional()
   @IsString()
+  @Transform(({ value }) => trimIfString(value))
   category?: string;
 
   @IsOptional()
   @IsString()
+  @Transform(({ value }) => trimIfString(value))
   notes?: string;
 }
 
@@ -218,9 +291,11 @@ export class CreateAdjustmentDto {
 
   @IsOptional()
   @IsString()
+  @Transform(({ value }) => trimIfString(value))
   category?: string;
 
   @IsOptional()
   @IsString()
+  @Transform(({ value }) => trimIfString(value))
   notes?: string;
 }

@@ -210,11 +210,10 @@ export interface MemberLedgerEntry {
   };
 }
 
-export interface MemberLedgerResponse {
+export interface MemberLedgerResponse extends Paginated<MemberLedgerEntry> {
   memberId: string;
   userName: string;
   currentBalance: number;
-  entries: MemberLedgerEntry[];
 }
 
 // --- Settlements ---
@@ -237,4 +236,19 @@ export interface SettlementSuggestionsResponse {
 export interface ApiError {
   message: string;
   statusCode: number;
+}
+
+// --- Pagination ---
+
+export interface Paginated<T> {
+  items: T[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface PaginationParams {
+  page?: number;
+  pageSize?: number;
 }

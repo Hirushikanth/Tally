@@ -5,6 +5,11 @@ import {
 } from '@nestjs/common';
 import { BusinessEventType } from '@prisma/client';
 import { PrismaService } from '../common/prisma/prisma.service';
+import {
+  resolvePagination,
+  paginate,
+} from '../common/pagination/paginate';
+import { PaginationQueryDto } from '../common/pagination/pagination.dto';
 import { EventsRepository } from './events.repository';
 import {
   computeSharedExpensePostings,
@@ -212,24 +217,32 @@ export class EventsService {
     });
   }
 
-  async findTripEvents(tripId: string) {
-    return this.prisma.businessEvent.findMany({
-      where: { tripId },
-      include: {
-        postings: {
-          include: {
-            member: {
-              include: {
-                user: { select: { id: true, name: true, email: true } },
+  async findTripEvents(tripId: string, query: PaginationQueryDto = {}) {
+    const { page, pageSize, skip } = resolvePagination(query);
+    const [total, items] = await Promise.all([
+      this.prisma.businessEvent.count({ where: { tripId } }),
+      this.prisma.businessEvent.findMany({
+        where: { tripId },
+        include: {
+          postings: {
+            include: {
+              member: {
+                include: {
+                  user: { select: { id: true, name: true, email: true } },
+                },
               },
             },
           },
+          createdBy: { select: { id: true, name: true, email: true } },
+          refundOf: { select: { id: true, type: true, amount: true } },
         },
-        createdBy: { select: { id: true, name: true, email: true } },
-        refundOf: { select: { id: true, type: true, amount: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
+      }),
+    ]);
+
+    return paginate(items, total, page, pageSize);
   }
 
   async findEventById(tripId: string, eventId: string) {

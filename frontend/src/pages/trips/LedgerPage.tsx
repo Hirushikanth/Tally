@@ -78,9 +78,9 @@ export function LedgerPage() {
           </GlassCard>
           <GlassCard className="ledger-summary-card">
             <span className="ledger-summary-label">Activity</span>
-            <span className="ledger-summary-count">{ledger.entries.length}</span>
+            <span className="ledger-summary-count">{ledger.total}</span>
             <span className="ledger-summary-sub">
-              {ledger.entries.length === 1 ? 'money movement' : 'money movements'}
+              {ledger.total === 1 ? 'money movement' : 'money movements'}
             </span>
           </GlassCard>
         </div>
@@ -92,7 +92,7 @@ export function LedgerPage() {
           <div style={{ padding: 40, display: 'flex', justifyContent: 'center' }}>
             <div className="spinner" />
           </div>
-        ) : !ledger || ledger.entries.length === 0 ? (
+        ) : !ledger || ledger.items.length === 0 ? (
           <div className="empty-state" style={{ padding: '60px 0' }}>
             <div className="empty-state-icon">🪙</div>
             <div className="empty-state-title">No activity yet</div>
@@ -103,7 +103,7 @@ export function LedgerPage() {
             </div>
           </div>
         ) : (
-          ledger.entries.map((entry, idx) => (
+          ledger.items.map((entry, idx) => (
             <LedgerRow key={entry.entryId} entry={entry} index={idx} />
           ))
         )}
