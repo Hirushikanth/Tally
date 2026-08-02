@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { useTrip } from '@/hooks/useTrips';
 import { useMemberLedger } from '@/hooks/useLedger';
 import { useAuthStore } from '@/store/auth.store';
@@ -125,11 +124,9 @@ function LedgerRow({ entry, index }: { entry: MemberLedgerEntry; index: number }
   const isInflow = entry.amount > 0;
 
   return (
-    <motion.div
-      className="ledger-row"
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.04, duration: 0.22, ease: 'easeOut' }}
+    <div
+      className="ledger-row enter-fade-up"
+      style={{ animationDelay: `${index * 40}ms` }}
     >
       <div className="ledger-icon" aria-hidden="true">{categoryIcon(event.category)}</div>
       <div className="ledger-main">
@@ -159,7 +156,7 @@ function LedgerRow({ entry, index }: { entry: MemberLedgerEntry; index: number }
           running {formatSigned(entry.runningBalance)}
         </span>
       </div>
-    </motion.div>
+    </div>
   );
 }
 

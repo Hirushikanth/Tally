@@ -1,5 +1,4 @@
 import { useParams, Navigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { useBalances } from '@/hooks/useLedger';
 import { useSuggestions } from '@/hooks/useSettlements';
 import { useTrip } from '@/hooks/useTrips';
@@ -86,12 +85,10 @@ export function BalancesPage() {
               {balancesData?.balances.map((b, idx) => {
                 const isMe = b.userId === user?.id;
                 return (
-                  <motion.div
+                  <div
                     key={b.memberId}
-                    className="position-card"
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.04, duration: 0.22, ease: 'easeOut' }}
+                    className="position-card enter-fade-up"
+                    style={{ animationDelay: `${idx * 40}ms` }}
                   >
                     <div className="position-user">
                       <Avatar name={b.userName} size="md" />
@@ -109,7 +106,7 @@ export function BalancesPage() {
                       </div>
                       <MonoAmount value={b.balance} asBalance size="16px" />
                     </div>
-                  </motion.div>
+                  </div>
                 );
               })}
             </div>
@@ -147,12 +144,10 @@ export function BalancesPage() {
           ) : (
             <div className="suggestions-list">
               {suggestionsData?.suggestedSettlements.map((s, idx) => (
-                <motion.div
+                <div
                   key={idx}
-                  className="suggestion-card"
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.04, duration: 0.22, ease: 'easeOut' }}
+                  className="suggestion-card enter-fade-up"
+                  style={{ animationDelay: `${idx * 40}ms` }}
                 >
                   <div className="suggestion-flow">
                     <div className="suggestion-person">
@@ -178,7 +173,7 @@ export function BalancesPage() {
                   >
                     Record settlement
                   </Button>
-                </motion.div>
+                </div>
               ))}
             </div>
           )}

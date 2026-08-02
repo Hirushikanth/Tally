@@ -1,4 +1,3 @@
-import { AnimatePresence, motion } from 'framer-motion';
 import { useUIStore } from '@/store/ui.store';
 
 export function ToastContainer() {
@@ -7,25 +6,19 @@ export function ToastContainer() {
 
   return (
     <div className="toast-container">
-      <AnimatePresence>
-        {toasts.map((toast) => (
-          <motion.div
-            key={toast.id}
-            className={`toast ${toast.type}`}
-            onClick={() => removeToast(toast.id)}
-            style={{ cursor: 'pointer' }}
-            initial={{ opacity: 0, x: 40, scale: 0.96 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: 24, scale: 0.96 }}
-            transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-          >
-            <span aria-hidden="true">
-              {toast.type === 'success' ? '✓' : toast.type === 'error' ? '✕' : 'ℹ'}
-            </span>
-            {toast.message}
-          </motion.div>
-        ))}
-      </AnimatePresence>
+      {toasts.map((toast) => (
+        <div
+          key={toast.id}
+          className={`toast ${toast.type} toast-enter`}
+          onClick={() => removeToast(toast.id)}
+          style={{ cursor: 'pointer' }}
+        >
+          <span aria-hidden="true">
+            {toast.type === 'success' ? '✓' : toast.type === 'error' ? '✕' : 'ℹ'}
+          </span>
+          {toast.message}
+        </div>
+      ))}
     </div>
   );
 }

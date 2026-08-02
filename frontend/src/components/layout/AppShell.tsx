@@ -1,5 +1,4 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
 import { useAuthStore } from '@/store/auth.store';
 import { useUIStore } from '@/store/ui.store';
 import { Stars } from '@/components/Stars';
@@ -41,34 +40,19 @@ export function AppShell() {
         </header>
 
         {/* Off-canvas backdrop (mobile only) */}
-        <AnimatePresence>
-          {sidebarOpen && (
-            <motion.div
-              className="sidebar-backdrop"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.18 }}
-              onClick={() => setSidebarOpen(false)}
-            />
-          )}
-        </AnimatePresence>
+        {sidebarOpen && (
+          <div
+            className="sidebar-backdrop backdrop-enter"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
 
         <Sidebar />
 
         <main className="app-main" id="main-content">
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={location.pathname}
-              className="page-transition"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.18, ease: 'easeOut' }}
-            >
-              <Outlet />
-            </motion.div>
-          </AnimatePresence>
+          <div key={location.pathname} className="page-transition page-enter">
+            <Outlet />
+          </div>
         </main>
       </div>
       <ToastContainer />

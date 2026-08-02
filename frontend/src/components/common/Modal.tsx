@@ -1,5 +1,4 @@
-import { AnimatePresence, motion } from 'framer-motion';
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
 
 interface ModalProps {
@@ -22,6 +21,9 @@ const FOCUSABLE_SELECTOR = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(',');
 
+/** Must match the .modal transition-duration in index.css. */
+const EXIT_MS = 280;
+
 export function Modal({
   open,
   onClose,
@@ -32,21 +34,48 @@ export function Modal({
 }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const lastFocusedRef = useRef<Element | null>(null);
+  const exitTimerRef = useRef<number | null>(null);
+  const [mounted, setMounted] = useState(open);
+  const [leaving, setLeaving] = useState(false);
   const titleId = useId();
   const descId = useId();
 
-  // On open: remember the trigger and move focus into the dialog.
-  // On close: restore focus to the trigger.
+  // Mount/unmount with a CSS exit animation: keep the DOM around for EXIT_MS
+  // after `open` flips to false so the transition can play.
   useEffect(() => {
     if (open) {
+      if (exitTimerRef.current) {
+        window.clearTimeout(exitTimerRef.current);
+        exitTimerRef.current = null;
+      }
       lastFocusedRef.current = document.activeElement;
+      setMounted(true);
+      setLeaving(false);
       const id = window.setTimeout(() => panelRef.current?.focus(), 0);
       return () => window.clearTimeout(id);
     }
-    const toRestore = lastFocusedRef.current;
-    lastFocusedRef.current = null;
-    if (toRestore instanceof HTMLElement) {
-      toRestore.focus();
+    setLeaving(true);
+    exitTimerRef.current = window.setTimeout(() => {
+      setMounted(false);
+      setLeaving(false);
+      exitTimerRef.current = null;
+    }, EXIT_MS);
+    return () => {
+      if (exitTimerRef.current) {
+        window.clearTimeout(exitTimerRef.current);
+        exitTimerRef.current = null;
+      }
+    };
+  }, [open]);
+
+  // Restore focus to the trigger as soon as the dialog starts closing.
+  useEffect(() => {
+    if (!open && lastFocusedRef.current) {
+      const toRestore = lastFocusedRef.current;
+      lastFocusedRef.current = null;
+      if (toRestore instanceof HTMLElement) {
+        toRestore.focus();
+      }
     }
   }, [open]);
 
@@ -74,55 +103,45 @@ export function Modal({
     }
   };
 
+  if (!mounted) return null;
+
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          className="modal-overlay"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.18 }}
-          onClick={onClose}
-        >
-          <motion.div
-            ref={panelRef}
-            className="modal"
-            style={panelStyle}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={titleId}
-            aria-describedby={description ? descId : undefined}
-            tabIndex={-1}
-            initial={{ opacity: 0, y: 26, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 14, scale: 0.98 }}
-            transition={{ type: 'spring', stiffness: 340, damping: 30 }}
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={trapFocus}
+    <div
+      className={`modal-overlay${leaving ? ' modal-overlay-leaving' : ''}`}
+      onClick={onClose}
+    >
+      <div
+        ref={panelRef}
+        className={`modal${leaving ? ' modal-leaving' : ''}`}
+        style={panelStyle}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={description ? descId : undefined}
+        tabIndex={-1}
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={trapFocus}
+      >
+        <div className="modal-header">
+          <h2 id={titleId} className="modal-title">
+            {title}
+          </h2>
+          <button
+            type="button"
+            className="modal-close"
+            onClick={onClose}
+            aria-label="Close"
           >
-            <div className="modal-header">
-              <h2 id={titleId} className="modal-title">
-                {title}
-              </h2>
-              <button
-                type="button"
-                className="modal-close"
-                onClick={onClose}
-                aria-label="Close"
-              >
-                <span aria-hidden="true">✕</span>
-              </button>
-            </div>
-            {description && (
-              <p id={descId} className="sr-only">
-                {description}
-              </p>
-            )}
-            {children}
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+            <span aria-hidden="true">✕</span>
+          </button>
+        </div>
+        {description && (
+          <p id={descId} className="sr-only">
+            {description}
+          </p>
+        )}
+        {children}
+      </div>
+    </div>
   );
 }

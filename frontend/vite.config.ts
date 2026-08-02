@@ -31,11 +31,6 @@ export default defineConfig({
               priority: 30,
             },
             {
-              name: 'motion-vendor',
-              test: /node_modules[\\/]framer-motion[\\/]/,
-              priority: 30,
-            },
-            {
               name: 'query-vendor',
               test: /node_modules[\\/]@tanstack[\\/]/,
               priority: 30,

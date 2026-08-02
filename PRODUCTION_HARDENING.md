@@ -630,6 +630,55 @@ du -sh dist/assets/* | sort -h          # compare against baseline
 # manual: devtools → network, disable cache, reload — observe chunk loading
 ```
 
+### Status — H9 complete (2026-08-03)
+
+- **framer-motion removed entirely** — not deferred, not swapped for `motion`:
+  dropped from `package.json`, the `motion-vendor` code-splitting group in
+  `vite.config.ts` was deleted, and the test mock/shim block in
+  `src/test/setup.ts` (matchMedia, WAAPI `Element.animate`, framer-motion
+  passthrough) was removed. All animations are now CSS-only:
+  - `AppShell` page transitions (`page-enter` + `key={location.pathname}`) and
+    the mobile sidebar backdrop (`backdrop-enter`) — CSS keyframe animations.
+  - `ToastContainer` — slide-in (`toast-enter`).
+  - Staggered list entrances on TripsListPage, TripDashboardPage, LedgerPage,
+    BalancesPage — shared `.enter-fade-up` class + `animation-delay` per row
+    (`animation-fill-mode: both` preserves the framer-motion "appear in order"
+    behavior).
+  - `Modal` rewritten with a closing-state machine (keeps the DOM mounted for
+    `EXIT_MS = 280` to play the exit transition, then unmounts): enter
+    spring ≈ `tally-modal-in` cubic-bezier(0.34, 1.3, 0.5, 1), overlay
+    fade, exit fade + scale. All H8 behavior preserved and re-tested: focus
+    trap, focus into dialog on open, focus restored to trigger on close,
+    Escape, `aria-labelledby`/`aria-describedby`, `aria-modal`.
+- **Fonts self-hosted** — `@fontsource/sora` (400–700) + `@fontsource/ibm-plex-mono`
+  (400/500) imported in `main.tsx`; the Google Fonts `<link>`s in
+  `index.html` and the redundant `@import` at the top of `index.css` removed
+  (external dependency + render-blocking + privacy leak all gone). woff2
+  files are emitted to `dist/assets` and referenced from the bundled CSS;
+  `font-display: swap` preserved.
+- **Chunk loading** — `dist/index.html` now modulepreloads only the 6 initial
+  modules (react/query/forms/vendor + app). The old `motion-vendor` (125 kB
+  raw / 40.8 kB gzip) is gone; lazy route chunks download only on navigation.
+- **Bundle-size guard** — `frontend/scripts/check-bundle-size.mjs` +
+  `pnpm --filter frontend check:bundle`, wired into CI after the frontend
+  build. Checks total raw JS (warn > 550 kB, fail > 700 kB) and initial-load
+  gzip from the `index.html` modulepreloads (warn > 130 kB, fail > 160 kB);
+  exits 1 on hard failure. Thresholds in the script mirror the budget here.
+
+**Measured (script output after this phase):**
+
+| Metric | Before (H9 audit) | After | Δ |
+|---|---|---|---|
+| Initial-load JS (gzip) | 149 kB | **101.2 kB** | **−32%** |
+| Total JS (raw, all chunks) | 596 kB | 463 kB | −22% |
+
+Both exceed the ≥ 20% reduction DoD. Reduced-motion is handled by the existing
+global `prefers-reduced-motion` block in `index.css` (replaces
+`MotionConfig reducedMotion="user"`). Visual regression was checked via the
+H8 axe suite + full test suite (70 tests green, coverage thresholds intact);
+manual visual QA of the modal/toast/page transitions is recommended at release
+per the DoD.
+
 ---
 
 ## Phase H10 — Deployment (backend + frontend + infra)

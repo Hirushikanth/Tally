@@ -1,5 +1,4 @@
 import { useParams, Navigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { useTrip } from '@/hooks/useTrips';
 import { useEvents } from '@/hooks/useEvents';
 import { useBalances } from '@/hooks/useLedger';
@@ -307,11 +306,9 @@ function ExpenseRow({
   const paidBy = event.createdBy?.name ?? 'Unknown';
 
   return (
-    <motion.div
-      className="expense-row"
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.04, duration: 0.22, ease: 'easeOut' }}
+    <div
+      className="expense-row enter-fade-up"
+      style={{ animationDelay: `${index * 40}ms` }}
     >
       <div className="expense-icon" aria-hidden="true">{icon}</div>
       <div className="expense-main">
@@ -331,7 +328,7 @@ function ExpenseRow({
       <div className="expense-amount">
         <MonoAmount value={event.amount} currency={currency} />
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -346,11 +343,9 @@ function BalanceRow({
 }) {
   const isMe = balance.userId === currentUserId;
   return (
-    <motion.div
-      className="balance-row"
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.04, duration: 0.22, ease: 'easeOut' }}
+    <div
+      className="balance-row enter-fade-up"
+      style={{ animationDelay: `${index * 40}ms` }}
     >
       <div className="balance-who">
         <Avatar name={balance.userName} size="sm" />
@@ -362,7 +357,7 @@ function BalanceRow({
         </span>
       </div>
       <MonoAmount value={balance.balance} asBalance />
-    </motion.div>
+    </div>
   );
 }
 

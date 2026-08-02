@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -222,10 +221,9 @@ function TripCard({
   const eventCount = trip._count?.businessEvents ?? 0;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05, duration: 0.24, ease: 'easeOut' }}
+    <div
+      className="enter-fade-up"
+      style={{ animationDelay: `${index * 50}ms` }}
     >
       <GlassCard className="trip-card" onClick={onClick}>
         <div className="trip-card-status">
@@ -246,6 +244,6 @@ function TripCard({
           <span>{formatDate(trip.createdAt)}</span>
         </div>
       </GlassCard>
-    </motion.div>
+    </div>
   );
 }

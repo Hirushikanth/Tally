@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Modal } from '@/components/common/Modal';
 
@@ -60,7 +60,9 @@ describe('Modal', () => {
     await user.click(screen.getByRole('button', { name: 'Open modal' }));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     await user.keyboard('{Escape}');
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+    );
   });
 
   it('moves focus into the dialog when it opens', async () => {
@@ -78,6 +80,9 @@ describe('Modal', () => {
     expect(screen.getByRole('dialog')).toHaveFocus();
     await user.keyboard('{Escape}');
     expect(trigger).toHaveFocus();
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+    );
   });
 
   it('cycles focus within the dialog on Tab, wrapping at both ends', async () => {

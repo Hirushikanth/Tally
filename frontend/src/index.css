@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
-
 /* ============================================================
    TALLY — Global Design System
    Cosmic dark theme with gold glassmorphism aesthetic
@@ -504,6 +502,72 @@ select {
 }
 
 /* ============================================================
+   ENTRANCE ANIMATIONS (CSS-only replacement for framer-motion)
+   ============================================================ */
+
+@keyframes tally-fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes tally-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes tally-toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(40px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes tally-modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(26px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Staggered list entrances (trip cards, ledger/expense/balance rows, suggestions) */
+.enter-fade-up {
+  animation: tally-fade-in-up 0.24s ease-out both;
+}
+
+/* Route-level page transition in AppShell */
+.page-enter {
+  animation: tally-fade-in-up 0.18s ease-out both;
+}
+
+/* Mobile sidebar backdrop */
+.backdrop-enter {
+  animation: tally-fade-in 0.18s ease both;
+}
+
+/* Toasts slide in from the right */
+.toast-enter {
+  animation: tally-toast-in 0.24s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+/* ============================================================
    MODAL OVERLAY
    ============================================================ */
 
@@ -518,6 +582,13 @@ select {
   align-items: center;
   justify-content: center;
   padding: var(--space-4);
+  animation: tally-fade-in 0.18s ease both;
+  transition: opacity 0.18s ease;
+}
+
+.modal-overlay-leaving {
+  animation: none;
+  opacity: 0;
 }
 
 .modal {
@@ -529,6 +600,16 @@ select {
   max-width: 520px;
   max-height: 90vh;
   overflow-y: auto;
+  animation: tally-modal-in 0.28s cubic-bezier(0.34, 1.3, 0.5, 1) both;
+  transition:
+    opacity 0.18s ease,
+    transform 0.28s cubic-bezier(0.34, 1.3, 0.5, 1);
+}
+
+.modal-leaving {
+  animation: none;
+  opacity: 0;
+  transform: translateY(14px) scale(0.98);
 }
 
 .modal-header {

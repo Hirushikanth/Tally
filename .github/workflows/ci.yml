@@ -51,6 +51,9 @@ jobs:
 
       - run: pnpm --filter frontend build
 
+      # Phase H9: fail the build if the JS bundle regresses past the budget.
+      - run: pnpm --filter frontend check:bundle
+
       - run: pnpm --filter frontend test
 
       # Phase H1: the production build must refuse to boot without a JWT_SECRET.
