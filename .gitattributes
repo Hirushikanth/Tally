@@ -1,0 +1,15 @@
+# Normalize line endings; force LF everywhere in this repo.
+* text=auto eol=lf
+
+# Generated / vendored artifacts are explicit about their on-disk form.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.eot binary
+*.ttf binary
+*.svg text eol=lf
