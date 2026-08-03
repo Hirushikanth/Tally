@@ -69,11 +69,21 @@ jobs:
       - name: Deploy API to Render
         if: steps.secrets-check.outputs.configured == 'true'
         run: |
-          curl -fsS -X POST \
-            "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" \
-            -H "Authorization: Bearer $RENDER_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d '{}'
+          set -euo pipefail
+          for i in $(seq 1 5); do
+            if curl -fsS -X POST \
+              "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" \
+              -H "Authorization: Bearer $RENDER_API_KEY" \
+              -H "Content-Type: application/json" \
+              -d '{}'; then
+              echo "Render deploy triggered (attempt $i)"
+              exit 0
+            fi
+            echo "Render deploy trigger failed (attempt $i) — retrying"
+            sleep $((i * 15))
+          done
+          echo "Render deploy trigger failed after 5 attempts"
+          exit 1
 
       - name: Wait for API health
         if: steps.secrets-check.outputs.configured == 'true'
