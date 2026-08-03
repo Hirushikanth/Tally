@@ -166,6 +166,7 @@
 .expense-title {
   font-size: 14px;
   font-weight: 500;
+  color: var(--text-hi);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -188,6 +189,7 @@
   font-family: var(--font-mono);
   font-size: 14.5px;
   font-weight: 500;
+  color: var(--text-hi);
   text-align: right;
   min-width: 80px;
   flex-shrink: 0;
