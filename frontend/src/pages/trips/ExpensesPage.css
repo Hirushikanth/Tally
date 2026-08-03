@@ -39,7 +39,13 @@
   align-items: center;
   gap: 16px;
   padding: 16px 0;
+  width: 100%;
+  border: none;
   border-bottom: 1px solid var(--border-glass);
+  background: none;
+  text-align: left;
+  font-family: var(--font-sans);
+  cursor: pointer;
   transition: background var(--transition-fast);
 }
 
@@ -57,6 +63,12 @@
   background: rgba(255, 255, 255, 0.015);
   margin: 0 -24px;
   padding: 16px 24px;
+  border-radius: 8px;
+}
+
+.expenses-row:focus-visible {
+  outline: 2px solid rgba(212, 175, 106, 0.6);
+  outline-offset: -2px;
   border-radius: 8px;
 }
 

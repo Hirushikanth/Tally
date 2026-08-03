@@ -161,6 +161,35 @@ export interface EventAllocation {
   };
 }
 
+/**
+ * Human-facing "what happened" facts persisted on the event row at creation
+ * time (who paid, how it split). Display metadata only — never used to derive
+ * balances. Optional because events created before this field existed have none.
+ */
+export interface EventMetadata {
+  payers?: PayerDto[];
+  split?: SplitDto;
+  lenderMemberId?: string;
+  borrowerMemberId?: string;
+  cashPayerMemberId?: string;
+  cashReceiverMemberId?: string;
+  refundedOfId?: string;
+  refundedAmount?: number;
+  allocations?: { memberId: string; amount: number }[];
+}
+
+/** One journal row for a member — the ledger-derived truth behind an event. */
+export interface EventPosting {
+  id: string;
+  businessEventId: string;
+  memberId: string;
+  amount: number; // signed: positive = should receive, negative = owes
+  createdAt: string;
+  member?: {
+    user: TripUser;
+  };
+}
+
 export interface BusinessEvent {
   id: string;
   tripId: string;
@@ -171,7 +200,10 @@ export interface BusinessEvent {
   createdById: string;
   createdAt: string;
   refundOfId: string | null;
+  refundOf?: { id: string; type: BusinessEventType; amount: number } | null;
   createdBy?: TripUser;
+  metadata?: EventMetadata | null;
+  postings?: EventPosting[];
   allocations?: EventAllocation[];
 }
 

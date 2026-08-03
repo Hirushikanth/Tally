@@ -90,6 +90,15 @@ export class EventsService {
         notes: dto.notes,
         category: dto.category,
       },
+      // Human-facing "what happened": who paid how much, and how it split.
+      // Display metadata only — the Posting journal remains the accounting truth.
+      details: {
+        payers: dto.payers.map((p) => ({
+          memberId: p.memberId,
+          amountPaid: p.amountPaid,
+        })),
+        split: splitPayload,
+      },
       postings,
     });
   }
@@ -119,6 +128,10 @@ export class EventsService {
         notes: dto.notes,
         category: dto.category,
       },
+      details: {
+        lenderMemberId: dto.lenderMemberId,
+        borrowerMemberId: dto.borrowerMemberId,
+      },
       postings,
     });
   }
@@ -147,6 +160,10 @@ export class EventsService {
         createdById: createdByUserId,
         notes: dto.notes,
         category: dto.category,
+      },
+      details: {
+        cashPayerMemberId: dto.cashPayerMemberId,
+        cashReceiverMemberId: dto.cashReceiverMemberId,
       },
       postings,
     });
@@ -185,6 +202,10 @@ export class EventsService {
         category: dto.category,
         refundOfId: dto.refundOfId,
       },
+      details: {
+        refundedOfId: dto.refundOfId,
+        refundedAmount: originalEvent.amount,
+      },
       postings,
     });
   }
@@ -209,6 +230,12 @@ export class EventsService {
         createdById: createdByUserId,
         notes: dto.notes,
         category: dto.category,
+      },
+      details: {
+        allocations: dto.postings.map((p) => ({
+          memberId: p.memberId,
+          amount: p.amount,
+        })),
       },
       postings,
     });

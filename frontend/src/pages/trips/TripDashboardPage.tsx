@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, Navigate } from 'react-router';
 import { useTrip } from '@/hooks/useTrips';
 import { useEvents } from '@/hooks/useEvents';
@@ -9,6 +10,7 @@ import { GlassCard } from '@/components/common/GlassCard';
 import { Avatar } from '@/components/common/Avatar';
 import { MonoAmount } from '@/components/common/MonoAmount';
 import { QueryErrorState } from '@/components/common/QueryErrorState';
+import { EventDetailsModal } from '@/components/events/EventDetailsModal';
 import { AddExpenseModal } from './modals/AddExpenseModal';
 import { AddLoanModal } from './modals/AddLoanModal';
 import { AddCashMovementModal } from './modals/AddCashMovementModal';
@@ -21,6 +23,7 @@ import './TripDashboardPage.css';
 export function TripDashboardPage() {
   const { tripId } = useParams<{ tripId: string }>();
   const user = useAuthStore((s) => s.user);
+  const [selectedEvent, setSelectedEvent] = useState<BusinessEvent | null>(null);
   const setAddExpenseModalOpen = useUIStore((s) => s.setAddExpenseModalOpen);
   const setAddLoanModalOpen = useUIStore((s) => s.setAddLoanModalOpen);
   const setAddCashMovementModalOpen = useUIStore((s) => s.setAddCashMovementModalOpen);
@@ -160,7 +163,13 @@ export function TripDashboardPage() {
             </div>
           ) : (
             recentEvents.map((event, idx) => (
-              <ExpenseRow key={event.id} event={event} currency={trip.currency} index={idx} />
+              <ExpenseRow
+                key={event.id}
+                event={event}
+                currency={trip.currency}
+                index={idx}
+                onSelect={() => setSelectedEvent(event)}
+              />
             ))
           )}
         </GlassCard>
@@ -259,6 +268,14 @@ export function TripDashboardPage() {
         tripId={tripId}
         onClose={() => setAddMemberModalOpen(false)}
       />
+
+      <EventDetailsModal
+        open={selectedEvent !== null}
+        event={selectedEvent}
+        currency={trip.currency}
+        members={trip.members}
+        onClose={() => setSelectedEvent(null)}
+      />
     </div>
   );
 }
@@ -297,18 +314,23 @@ function ExpenseRow({
   event,
   currency,
   index,
+  onSelect,
 }: {
   event: BusinessEvent;
   currency: string;
   index: number;
+  onSelect: () => void;
 }) {
   const icon = categoryIcon(event.category);
   const paidBy = event.createdBy?.name ?? 'Unknown';
 
   return (
-    <div
+    <button
+      type="button"
       className="expense-row enter-fade-up"
       style={{ animationDelay: `${index * 40}ms` }}
+      aria-label={`View details for ${event.notes || eventTypeLabel(event.type)}`}
+      onClick={onSelect}
     >
       <div className="expense-icon" aria-hidden="true">{icon}</div>
       <div className="expense-main">
@@ -328,7 +350,7 @@ function ExpenseRow({
       <div className="expense-amount">
         <MonoAmount value={event.amount} currency={currency} />
       </div>
-    </div>
+    </button>
   );
 }
 

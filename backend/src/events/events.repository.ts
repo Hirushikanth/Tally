@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { BusinessEvent, BusinessEventType, Posting } from '@prisma/client';
+import {
+  BusinessEvent,
+  BusinessEventType,
+  Posting,
+  Prisma,
+} from '@prisma/client';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { validateZeroSum } from '../posting-engine/validate-zero-sum';
 import { PostingDraft } from '../posting-engine/posting-engine.types';
@@ -14,6 +19,8 @@ export interface SaveEventParams {
     category?: string;
     refundOfId?: string;
   };
+  /** Human-facing detail facts (who paid, split method, etc.) — display metadata only. */
+  details?: Prisma.InputJsonValue;
   postings: PostingDraft[];
 }
 
@@ -30,7 +37,7 @@ export class EventsRepository {
    * Runs validateZeroSum on postings prior to persistence.
    */
   async saveEvent(params: SaveEventParams): Promise<BusinessEventWithPostings> {
-    const { tripId, type, metadata, postings } = params;
+    const { tripId, type, metadata, details, postings } = params;
 
     // Application-level pre-guard
     validateZeroSum(postings);
@@ -45,6 +52,7 @@ export class EventsRepository {
           notes: metadata.notes,
           category: metadata.category,
           refundOfId: metadata.refundOfId,
+          metadata: details,
         },
       });
 

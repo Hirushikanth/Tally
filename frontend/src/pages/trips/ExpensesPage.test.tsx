@@ -141,4 +141,56 @@ describe('ExpensesPage', () => {
     renderExpensesPage();
     expect(screen.getByText('No expenses yet')).toBeInTheDocument();
   });
+
+  it('opens the details modal when an expense row is clicked', async () => {
+    const user = userEvent.setup();
+    mockedUseTrip.mockReturnValue({
+      data: mockTrip({ id: 't1' }),
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    } as never);
+    mockedUseInfiniteEvents.mockReturnValue({
+      data: {
+        pages: [
+          {
+            items: [
+              makeEvent({
+                metadata: {
+                  payers: [{ memberId: 'm1', amountPaid: 5000 }],
+                  split: { method: 'EQUAL', participantIds: ['m1', 'm2'] },
+                },
+                postings: [
+                  { id: 'p1', businessEventId: 'e1', memberId: 'm1', amount: 2500, createdAt: '2026-07-02T00:00:00.000Z' },
+                  { id: 'p2', businessEventId: 'e1', memberId: 'm2', amount: -2500, createdAt: '2026-07-02T00:00:00.000Z' },
+                ],
+              }),
+            ],
+            page: 1,
+            pageSize: 50,
+            total: 1,
+            totalPages: 1,
+          },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+      isFetchingNextPage: false,
+      hasNextPage: false,
+      fetchNextPage: vi.fn(),
+      refetch: vi.fn(),
+    } as never);
+
+    renderExpensesPage();
+
+    await user.click(
+      screen.getByRole('button', { name: 'View details for Dinner at the lodge' }),
+    );
+
+    expect(
+      screen.getByRole('heading', { name: 'Shared expense details' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Paid by')).toBeInTheDocument();
+    expect(screen.getByText('Who owes what')).toBeInTheDocument();
+  });
 });

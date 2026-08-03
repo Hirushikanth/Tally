@@ -128,6 +128,11 @@ model BusinessEvent {
   refundOf   BusinessEvent?  @relation("EventRefunds", fields: [refundOfId], references: [id])
   refunds    BusinessEvent[] @relation("EventRefunds")
 
+  // Human-facing detail facts (who paid, how it split, lender/borrower, etc.).
+  // Never consumed by the Posting Engine — the journal (Postings) stays the
+  // single source of accounting truth; this is display metadata, like notes/category.
+  metadata Json?
+
   attachments Attachment[]
   postings    Posting[]
 

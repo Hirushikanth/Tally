@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, Navigate } from 'react-router';
 import { useInfiniteEvents } from '@/hooks/useEvents';
 import { useTrip } from '@/hooks/useTrips';
@@ -5,9 +6,11 @@ import { MonoAmount } from '@/components/common/MonoAmount';
 import { GlassCard } from '@/components/common/GlassCard';
 import { Button } from '@/components/common/Button';
 import { QueryErrorState } from '@/components/common/QueryErrorState';
+import { EventDetailsModal } from '@/components/events/EventDetailsModal';
 import { useUIStore } from '@/store/ui.store';
 import { categoryIcon, eventTypeLabel, formatDate } from '@/lib/utils';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import type { BusinessEvent } from '@/api/types';
 import { AddExpenseModal } from './modals/AddExpenseModal';
 import { AddLoanModal } from './modals/AddLoanModal';
 import { AddCashMovementModal } from './modals/AddCashMovementModal';
@@ -18,6 +21,7 @@ export function ExpensesPage() {
   const { tripId } = useParams<{ tripId: string }>();
   useDocumentTitle('All Expenses');
   const user = useAuthStore((s) => s.user);
+  const [selectedEvent, setSelectedEvent] = useState<BusinessEvent | null>(null);
   const { data: trip } = useTrip(tripId ?? null);
   const {
     data: eventsData,
@@ -92,7 +96,13 @@ export function ExpensesPage() {
         ) : (
           <>
             {sortedEvents.map((event) => (
-              <div key={event.id} className="expenses-row">
+              <button
+                key={event.id}
+                type="button"
+                className="expenses-row"
+                aria-label={`View details for ${event.notes || eventTypeLabel(event.type)}`}
+                onClick={() => setSelectedEvent(event)}
+              >
                 <div className="expenses-icon" aria-hidden="true">{categoryIcon(event.category)}</div>
                 <div className="expenses-main">
                   <div className="expenses-row-title">
@@ -112,7 +122,7 @@ export function ExpensesPage() {
                   </div>
                 </div>
                 <MonoAmount value={event.amount} currency={trip?.currency ?? 'LKR'} />
-              </div>
+              </button>
             ))}
             {hasNextPage && (
               <div className="expenses-load-more">
@@ -155,6 +165,14 @@ export function ExpensesPage() {
         currency={trip?.currency ?? 'LKR'}
         currentMemberId={myMember?.id ?? ''}
         onClose={() => setAddCashMovementModalOpen(false)}
+      />
+
+      <EventDetailsModal
+        open={selectedEvent !== null}
+        event={selectedEvent}
+        currency={trip?.currency ?? 'LKR'}
+        members={trip?.members ?? []}
+        onClose={() => setSelectedEvent(null)}
       />
     </div>
   );

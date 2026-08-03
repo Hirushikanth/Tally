@@ -184,6 +184,24 @@ describe('Phase 4 — Business Event APIs E2E', () => {
       // Zero-sum invariant check
       const sum = Array.from(postingsMap.values()).reduce((a, b) => a + b, 0);
       expect(sum).toBe(0);
+
+      // Human-facing detail facts persist and round-trip for the detail view
+      expect(res.body.metadata).toEqual({
+        payers: [
+          { memberId: hirushiMemberId, amountPaid: 6000 },
+          { memberId: kasunMemberId, amountPaid: 4000 },
+        ],
+        split: {
+          method: 'EQUAL',
+          participantIds: [
+            hirushiMemberId,
+            kasunMemberId,
+            amalMemberId,
+            sahanMemberId,
+            nimalMemberId,
+          ],
+        },
+      });
     });
 
     it('returns 422 if payer amounts do not equal total amount', async () => {
@@ -357,6 +375,11 @@ describe('Phase 4 — Business Event APIs E2E', () => {
 
       expect(postingsMap.get(kasunMemberId)).toBe(5000);  // Lender: +5000
       expect(postingsMap.get(amalMemberId)).toBe(-5000);  // Borrower: -5000
+
+      expect(res.body.metadata).toEqual({
+        lenderMemberId: kasunMemberId,
+        borrowerMemberId: amalMemberId,
+      });
     });
   });
 
