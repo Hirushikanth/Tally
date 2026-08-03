@@ -1,5 +1,9 @@
 # Tally
 
+**Live production:** [tally-spa.vercel.app](https://tally-spa.vercel.app) · [tally-api-f95d.onrender.com](https://tally-api-f95d.onrender.com/health)
+
+[![CI](https://github.com/Hirushikanth/Tally/actions/workflows/ci.yml/badge.svg)](https://github.com/Hirushikanth/Tally/actions/workflows/ci.yml)
+
 A ledger-based collaborative expense management platform for trips, roommates, and groups — built on real accounting principles, not ad-hoc splitting math.
 
 > **Guiding principle:** *A ledger never lies.* Every financial answer the app ever shows is traceable back to the transactions that produced it.
@@ -75,8 +79,8 @@ See `ACCOUNTING.md` (the accounting constitution) and `ARCHITECTURE.md` for the 
 
 ## Prerequisites
 
-- Node.js 20+
-- [pnpm](https://pnpm.io) 9+
+- Node.js 24 (`.nvmrc` is committed; CI runs on 24)
+- [pnpm](https://pnpm.io) 10 (`corepack enable`; the `packageManager` field pins the version)
 - PostgreSQL 16 (local, or a Neon free-tier project)
 
 ## Setup
@@ -188,8 +192,9 @@ record, and [`DEPLOYMENT.md`](DEPLOYMENT.md) for the deploy runbook.
   Postgres with CI/CD, live smoke test
 - Ops: Sentry error reporting (optional), backup runbook, release checklist
 
-Remaining: full QA sign-off per [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md)
-and one real production deploy.
+Remaining: full QA sign-off per [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md). A
+`v1.0.0` release is deployed and live (SPA on Vercel, API on Render, Postgres
+on Neon); see [`DEPLOYMENT.md`](DEPLOYMENT.md) for the runbook.
 
 ## License
 
