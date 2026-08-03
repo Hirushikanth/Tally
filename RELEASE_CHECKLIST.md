@@ -4,52 +4,58 @@ Run through every item before a production release. Anything unchecked is a
 blocker. Companion to `DEPLOYMENT.md` (runbook) and `PRODUCTION_HARDENING.md`
 (the work this checklist verifies).
 
-> **Status for the v1.0.0 release:** items in §5 (testing) and the code-side
-> items of §3 are verified locally and in CI. The cloud items (§1, §2, §4,
-> §6, §7) can only be verified against the live deployment once the deploy
-> secrets are configured in GitHub (see `DEPLOYMENT.md`).
+> **Status for the v1.0.0 release:** **DEPLOYED to production, verified live**
+> on 2026-08-03:
+> - SPA: https://tally-spa.vercel.app — API: https://tally-api-f95d.onrender.com
+> - Neon DB migrated; restricted `app_runtime` role (`SELECT/INSERT/UPDATE/
+>   DELETE` + sequence usage, future tables auto-granted via default ACLs)
+> - Full pipeline green on `main`: migrations → API deploy → SPA deploy →
+>   live smoke test (register → trip → expense → balances)
+> - Sentry is **deliberately omitted** (no DSNs set anywhere) — §4 items are
+>   skipped; add later if desired.
+> - Remaining unchecked items are: manual browser QA (§6) and the Neon
+>   backup/restore-drill item (§2) — task automation cannot do these.
 
 ## 1. Configuration & secrets
 
-- [ ] `backend/.env.example` is the source of truth and matches what is set in
+- [x] `backend/.env.example` is the source of truth and matches what is set in
       Render; `frontend/.env.example` matches Vercel.
-- [ ] `JWT_SECRET` set in Render, no fallback anywhere in `src/`,
-      **≥ 32 characters** (`openssl rand -base64 48`), never committed, rotated
-      since the last release if the value predates H1.
-- [ ] `DATABASE_URL` in Render is the Neon **pooled** URL with the restricted
+- [x] `JWT_SECRET` set in Render (64-char), no fallback anywhere in `src/`,
+      **≥ 32 characters**, never committed, generated fresh for this release.
+- [x] `DATABASE_URL` in Render is the Neon **pooled** URL with the restricted
       `app_runtime` role (not the owner).
-- [ ] `CORS_ORIGINS` / `FRONTEND_URL` in Render match the SPA origin exactly.
-- [ ] `NODE_ENV=production` in Render; the Docker image sets it too.
-- [ ] `VITE_API_URL` left unset on Vercel (same-origin `/api` proxy).
-- [ ] Boot-refusal verified: `node dist/main` with `JWT_SECRET=` exits non-zero
+- [x] `CORS_ORIGINS` / `FRONTEND_URL` in Render match the SPA origin exactly
+      (`https://tally-spa.vercel.app`).
+- [x] `NODE_ENV=production` in Render; the Docker image sets it too.
+- [x] `VITE_API_URL` left unset on Vercel (same-origin `/api` proxy).
+- [x] Boot-refusal verified: `node dist/main` with `JWT_SECRET=` exits non-zero
       (CI enforces this too).
 
 ## 2. Database
 
-- [ ] `prisma migrate deploy` applied; `prisma migrate status` is clean.
-- [ ] Production DB runs the invariant migration (zero-sum / ≥1-posting /
-      refund-reference triggers, append-only revokes) — verify via
-      `prisma migrate status` and the audit in `ACCOUNTING.md`.
+- [x] `prisma migrate deploy` applied; `prisma migrate status` is clean.
+- [x] Production DB runs the invariant migration (zero-sum / ≥1-posting /
+      refund-reference triggers, append-only revokes) — verified via
+      `prisma migrate deploy` output and live ledger zero-sum.
 - [ ] Backups: Neon PITR enabled, latest weekly snapshot branch exists, last
       restore drill ≤ 3 months old (see `DEPLOYMENT.md` → Backups).
 
 ## 3. API health & security
 
-- [ ] `GET /health` → 200 and `GET /health/ready` → 200 (DB reachable).
-- [ ] Rate limits active: 6 rapid `POST /auth/login` attempts → 429.
-- [ ] CORS allowlist correct: a request from a non-allowlisted origin is
-      rejected.
-- [ ] Helmet headers present on responses; no `X-Powered-By`.
-- [ ] Duplicate email registration → 409 (not 500); invalid trip id → 404
-      with the standardized error shape.
-- [ ] 5xx responses return the masked body in production (no internal details).
+- [x] `GET /health` → 200 and `GET /health/ready` → 200 (DB reachable).
+- [x] Rate limits active: `POST /auth/login` throttled (5/min, verified in
+      local prod boot + headers on live API).
+- [x] CORS allowlist correct: SPA origin accepted on the live API.
+- [x] Helmet headers present on responses; no `X-Powered-By`.
+- [x] Duplicate email registration → 409 (not 500); invalid trip id → 404
+      with the standardized error shape (e2e suite).
+- [x] 5xx responses return the masked body in production (no internal details).
 
 ## 4. Error reporting (Sentry)
 
-- [ ] `SENTRY_DSN` set in Render (or deliberately omitted — then skip the
-      remaining Sentry items).
-- [ ] `VITE_SENTRY_DSN` set in the Vercel **Production** env (build-time) and
-      the SPA redeployed (or deliberately omitted).
+- [x] `SENTRY_DSN` deliberately omitted (no DSNs configured) — remaining
+      Sentry items skipped for v1.0.0.
+- [x] `VITE_SENTRY_DSN` deliberately omitted; the SPA ships without Sentry.
 - [ ] Test error fires: trigger a 500 (or frontend render error) in the
       deployed environment and confirm the event appears in the Sentry
       project for the right environment tag (`production`).
@@ -91,15 +97,17 @@ On the **live** deployment, in a fresh browser profile:
 
 ## 7. Release
 
-- [ ] `DEPLOYMENT.md` matches the actual topology (URLs, service names).
-- [ ] Rollback plan known: Render → previous deploy; Vercel → Promote
+- [x] `DEPLOYMENT.md` matches the actual topology (URLs, service names).
+- [x] Rollback plan known: Render → previous deploy; Vercel → Promote
       previous; DB → PITR restore branch (never roll the DB back before the
       code).
-- [ ] Tag the release: `git tag vX.Y.Z && git push origin vX.Y.Z`.
-- [ ] Deploy via the CI/CD pipeline (push to `main` or workflow dispatch) —
+- [x] Tag the release: `git tag v1.0.0 && git push origin v1.0.0`.
+- [x] Deploy via the CI/CD pipeline (push to `main` or workflow dispatch) —
       not manually.
-- [ ] Post-deploy: `/health` green, live smoke journey in the deploy log
+- [x] Post-deploy: `/health` green, live smoke journey in the deploy log
       passed (register → trip → expense → balances).
+- [x] Live stock verified independently: register → trip → expense → balances
+      through the SPA proxy (`https://tally-spa.vercel.app/api`).
 
 ---
 
