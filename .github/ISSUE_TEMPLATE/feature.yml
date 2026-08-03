@@ -1,0 +1,38 @@
+name: Feature request
+description: Suggest something new
+title: "[feat] "
+labels: [enhancement]
+body:
+  - type: markdown
+    name: intro
+    content: Ideas are welcome. This template keeps them actionable.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / use case
+      description: What are you trying to do that the app doesn't support?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Workarounds you've tried or other designs, if any.
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - label: Backend / posting-engine change (accounting impact)
+        - label: Frontend / UX change
+        - label: Infra / ops / CI change
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else

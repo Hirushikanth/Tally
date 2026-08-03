@@ -1,0 +1,45 @@
+name: Bug report
+description: Something isn't working
+title: "[bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Please fill out as much as you can. Screenshots and exact steps make fixes far faster.
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Production (tally-spa.vercel.app) or local dev?
+      placeholder: Production
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What did you click, in order?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include the browser console output and the API response if visible.
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: Anything financial (a wrong balance/ledger entry) should be flagged.
+  - type: markdown
+    name: foot
+    content: |
+      ⚠️ Never paste tokens, passwords, or a real `.env`. Use the private [Security advisory](https://github.com/Hirushikanth/Tally/security/advisories) for anything sensitive.
