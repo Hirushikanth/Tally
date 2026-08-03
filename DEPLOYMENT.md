@@ -55,7 +55,7 @@ runs migrations before releasing.
 | `VERCEL_TOKEN` | Deploying the SPA (`vercel` CLI token). |
 | `VERCEL_ORG_ID` | `vercel whoami` output after linking. |
 | `VERCEL_PROJECT_ID` | `.vercel/project.json` after linking. |
-| `API_URL` | Live smoke tests, e.g. `https://tally-api.onrender.com`. |
+| `API_URL` | Live smoke tests. This deployment: `https://tally-api-f95d.onrender.com`. |
 
 ## One-time provisioning
 
@@ -80,6 +80,9 @@ runs migrations before releasing.
 
 1. Create the service from the blueprint: Render dashboard → Blueprint → paste
    the contents of `render.yaml` (or `render blueprint launch`).
+2. **Render now requires a payment method on file before it will create any
+   service via the API** (dashboard → Billing → add a card; free-tier services
+   are not charged).
 2. Set the two secrets (`sync: false` vars): `DATABASE_URL` (pooled) and
    `JWT_SECRET` (`openssl rand -base64 48`).
 3. Update `CORS_ORIGINS` / `FRONTEND_URL` in `render.yaml` to the SPA origin
@@ -103,7 +106,7 @@ runs migrations before releasing.
    before the build runs or Sentry is omitted from the bundle. A dummy value
    builds the bundle identically but sends nothing.
 5. Edit `frontend/vercel.json` → replace the `destination` with your real
-   Render API URL (`https://tally-api.onrender.com/:path*`).
+   Render API URL. This deployment: `https://tally-api-f95d.onrender.com/:path*`.
 6. Link locally for the CI token:
    ```
    npx vercel link
