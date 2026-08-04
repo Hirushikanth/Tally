@@ -121,6 +121,31 @@ export class ResetPasswordDto {
   password: string;
 }
 
+export class ChangePasswordDto {
+  @IsString()
+  @IsNotEmpty()
+  currentPassword: string;
+
+  @IsString()
+  @MinLength(8, { message: PASSWORD_RULES_MESSAGE })
+  @MaxLength(128)
+  @Matches(PASSWORD_REGEX, { message: PASSWORD_RULES_MESSAGE })
+  newPassword: string;
+}
+
+export class UpdateSecurityQuestionsDto {
+  @IsString()
+  @IsNotEmpty()
+  currentPassword: string;
+
+  @IsArray()
+  @ArrayMinSize(2, { message: 'Provide at least 2 security questions' })
+  @ArrayMaxSize(4)
+  @ValidateNested({ each: true })
+  @Type(() => SecurityQuestionDto)
+  securityQuestions: SecurityQuestionDto[];
+}
+
 export class RefreshDto {
   @IsString()
   @IsNotEmpty()

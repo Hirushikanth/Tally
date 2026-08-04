@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const supertest = require('supertest') as (app: unknown) => import('supertest').SuperTest<import('supertest').Test>;
+import * as bcrypt from 'bcrypt';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/common/prisma/prisma.service';
 
@@ -366,6 +367,199 @@ describe('Phase 3 — Auth, Trips & Members E2E', () => {
         .post('/auth/reset-password')
         .send({ token: 'bogus-token', password: 'newpassword456' })
         .expect(401);
+    });
+  });
+
+  // ─── Account settings (authenticated) ──────────────────────────────────────
+
+  describe('Account settings', () => {
+    const loginAs = async (email: string, password = 'password123') => {
+      const res = await loginUser(server, email, password).expect(200);
+      return res.body.accessToken as string;
+    };
+
+    it('GET /auth/security-questions requires authentication', async () => {
+      await supertest(app.getHttpServer())
+        .get('/auth/security-questions')
+        .expect(401);
+    });
+
+    it('GET /auth/security-questions returns the questions (never answer hashes)', async () => {
+      await registerUser(server, 'Alice', 'alice@example.com');
+      const token = await loginAs('alice@example.com');
+
+      const res = await supertest(app.getHttpServer())
+        .get('/auth/security-questions')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+
+      expect(res.body).toHaveLength(2);
+      expect(res.body.map((q: { question: string }) => q.question)).toEqual([
+        'What was the name of your first pet?',
+        'In which city were you born?',
+      ]);
+      expect(res.body[0].answerHash).toBeUndefined();
+    });
+
+    it('allows legacy accounts (no questions) to set security questions', async () => {
+      // Simulate an account created before security questions existed.
+      await prisma.user.create({
+        data: {
+          name: 'Legacy',
+          email: 'legacy@example.com',
+          passwordHash: await bcrypt.hash('password123', 12),
+        },
+      });
+      const token = await loginAs('legacy@example.com');
+      const bearer = `Bearer ${token}`;
+
+      const before = await supertest(app.getHttpServer())
+        .get('/auth/security-questions')
+        .set('Authorization', bearer)
+        .expect(200);
+      expect(before.body).toEqual([]);
+
+      await supertest(app.getHttpServer())
+        .put('/auth/security-questions')
+        .set('Authorization', bearer)
+        .send({
+          currentPassword: 'password123',
+          securityQuestions: [
+            { question: 'First pet?', answer: 'Rex' },
+            { question: 'Birth city?', answer: 'Kandy' },
+          ],
+        })
+        .expect(200);
+
+      const after = await supertest(app.getHttpServer())
+        .get('/auth/security-questions')
+        .set('Authorization', bearer)
+        .expect(200);
+      expect(after.body).toHaveLength(2);
+      expect(after.body.map((q: { question: string }) => q.question)).toEqual([
+        'First pet?',
+        'Birth city?',
+      ]);
+    });
+
+    it('replaces existing security questions', async () => {
+      await registerUser(server, 'Alice', 'alice@example.com');
+      const token = await loginAs('alice@example.com');
+      const bearer = `Bearer ${token}`;
+
+      await supertest(app.getHttpServer())
+        .put('/auth/security-questions')
+        .set('Authorization', bearer)
+        .send({
+          currentPassword: 'password123',
+          securityQuestions: [
+            { question: 'Favourite movie?', answer: 'Inception' },
+            { question: 'First school?', answer: 'Hillside' },
+          ],
+        })
+        .expect(200);
+
+      const after = await supertest(app.getHttpServer())
+        .get('/auth/security-questions')
+        .set('Authorization', bearer)
+        .expect(200);
+      expect(after.body).toHaveLength(2);
+      expect(after.body.map((q: { question: string }) => q.question)).toEqual([
+        'Favourite movie?',
+        'First school?',
+      ]);
+    });
+
+    it('PUT /auth/security-questions rejects the wrong current password', async () => {
+      await registerUser(server, 'Alice', 'alice@example.com');
+      const token = await loginAs('alice@example.com');
+
+      await supertest(app.getHttpServer())
+        .put('/auth/security-questions')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          currentPassword: 'wrong-password',
+          securityQuestions: SECURITY_QUESTIONS,
+        })
+        .expect(401);
+    });
+
+    it('PUT /auth/security-questions rejects duplicate questions', async () => {
+      await registerUser(server, 'Alice', 'alice@example.com');
+      const token = await loginAs('alice@example.com');
+
+      await supertest(app.getHttpServer())
+        .put('/auth/security-questions')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          currentPassword: 'password123',
+          securityQuestions: [
+            { question: 'First pet?', answer: 'Rex' },
+            { question: 'First pet?', answer: 'Fluffy' },
+          ],
+        })
+        .expect(400);
+    });
+
+    it('POST /auth/change-password requires authentication', async () => {
+      await supertest(app.getHttpServer())
+        .post('/auth/change-password')
+        .send({ currentPassword: 'password123', newPassword: 'newpassword456' })
+        .expect(401);
+    });
+
+    it('POST /auth/change-password rejects the wrong current password', async () => {
+      await registerUser(server, 'Alice', 'alice@example.com');
+      const token = await loginAs('alice@example.com');
+
+      await supertest(app.getHttpServer())
+        .post('/auth/change-password')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ currentPassword: 'nope', newPassword: 'newpassword456' })
+        .expect(401);
+    });
+
+    it('POST /auth/change-password rejects a weak new password', async () => {
+      await registerUser(server, 'Alice', 'alice@example.com');
+      const token = await loginAs('alice@example.com');
+
+      await supertest(app.getHttpServer())
+        .post('/auth/change-password')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ currentPassword: 'password123', newPassword: 'short' })
+        .expect(400);
+    });
+
+    it('POST /auth/change-password updates the password, rotates the session and signs out other devices', async () => {
+      await registerUser(server, 'Alice', 'alice@example.com');
+      const login = await loginUser(server, 'alice@example.com').expect(200);
+      const oldRefreshToken = login.body.refreshToken as string;
+      const token = login.body.accessToken as string;
+
+      const res = await supertest(app.getHttpServer())
+        .post('/auth/change-password')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ currentPassword: 'password123', newPassword: 'newpassword456' })
+        .expect(200);
+
+      // Fresh session for this device…
+      expect(res.body.accessToken).toBeDefined();
+      expect(res.body.refreshToken).toBeDefined();
+      expect(res.body.refreshToken).not.toBe(oldRefreshToken);
+
+      // …old sessions are dead, old password fails, new password works.
+      await supertest(app.getHttpServer())
+        .post('/auth/refresh')
+        .send({ refreshToken: oldRefreshToken })
+        .expect(401);
+      await loginUser(server, 'alice@example.com', 'password123').expect(401);
+      await loginUser(server, 'alice@example.com', 'newpassword456').expect(200);
+
+      // The fresh refresh token keeps working.
+      await supertest(app.getHttpServer())
+        .post('/auth/refresh')
+        .send({ refreshToken: res.body.refreshToken })
+        .expect(200);
     });
   });
 

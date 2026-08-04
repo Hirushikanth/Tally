@@ -76,6 +76,20 @@ export interface ResetPasswordResponse {
   success: boolean;
 }
 
+export interface ChangePasswordDto {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface UpdateSecurityQuestionsDto {
+  currentPassword: string;
+  securityQuestions: SecurityQuestionDto[];
+}
+
+export interface SuccessResponse {
+  success: boolean;
+}
+
 // --- Trips ---
 
 export type TripStatus = 'ACTIVE' | 'ARCHIVED' | 'SETTLED';

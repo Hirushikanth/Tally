@@ -31,6 +31,11 @@ const BalancesPage = lazy(() =>
 const LedgerPage = lazy(() =>
   import('@/pages/trips/LedgerPage').then((m) => ({ default: m.LedgerPage })),
 );
+const SettingsPage = lazy(() =>
+  import('@/pages/settings/SettingsPage').then((m) => ({
+    default: m.SettingsPage,
+  })),
+);
 
 function PageFallback() {
   return (
@@ -60,6 +65,7 @@ export function App() {
         {/* Protected routes inside AppShell */}
         <Route element={<AppShell />}>
           <Route path="/trips" element={<TripsListPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
           <Route path="/trips/:tripId" element={<TripDashboardPage />} />
           <Route path="/trips/:tripId/expenses" element={<ExpensesPage />} />
           <Route path="/trips/:tripId/balances" element={<BalancesPage />} />

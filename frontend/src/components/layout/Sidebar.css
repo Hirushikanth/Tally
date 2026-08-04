@@ -199,6 +199,7 @@
   white-space: nowrap;
 }
 
+.sidebar-settings,
 .sidebar-logout {
   width: 28px;
   height: 28px;
@@ -214,6 +215,12 @@
   transition: background var(--transition-fast), color var(--transition-fast),
     border-color var(--transition-fast);
   flex-shrink: 0;
+}
+
+.sidebar-settings:hover {
+  background: var(--gold-dim);
+  border-color: rgba(212, 175, 106, 0.25);
+  color: var(--gold-soft);
 }
 
 .sidebar-logout:hover {

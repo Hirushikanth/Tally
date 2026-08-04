@@ -123,6 +123,17 @@ export function Sidebar() {
           </>
         )}
         <button
+          className="sidebar-settings"
+          onClick={() => {
+            setSidebarOpen(false);
+            navigate('/settings');
+          }}
+          aria-label="Settings"
+          title="Settings"
+        >
+          <span aria-hidden="true">⚙</span>
+        </button>
+        <button
           className="sidebar-logout"
           onClick={handleLogout}
           aria-label="Sign out"

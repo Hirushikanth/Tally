@@ -1,6 +1,7 @@
 import { apiClient } from './client';
 import type {
   AuthResponse,
+  ChangePasswordDto,
   ForgotPasswordDto,
   ForgotPasswordResponse,
   LoginDto,
@@ -8,6 +9,9 @@ import type {
   RegisterResponse,
   ResetPasswordDto,
   ResetPasswordResponse,
+  SecurityQuestion,
+  SuccessResponse,
+  UpdateSecurityQuestionsDto,
   VerifyAnswersDto,
   VerifyAnswersResponse,
 } from './types';
@@ -51,6 +55,31 @@ export const authApi = {
   ): Promise<ResetPasswordResponse> => {
     const { data } = await apiClient.post<ResetPasswordResponse>(
       '/auth/reset-password',
+      dto,
+    );
+    return data;
+  },
+
+  getSecurityQuestions: async (): Promise<SecurityQuestion[]> => {
+    const { data } = await apiClient.get<SecurityQuestion[]>(
+      '/auth/security-questions',
+    );
+    return data;
+  },
+
+  updateSecurityQuestions: async (
+    dto: UpdateSecurityQuestionsDto,
+  ): Promise<SuccessResponse> => {
+    const { data } = await apiClient.put<SuccessResponse>(
+      '/auth/security-questions',
+      dto,
+    );
+    return data;
+  },
+
+  changePassword: async (dto: ChangePasswordDto): Promise<AuthResponse> => {
+    const { data } = await apiClient.post<AuthResponse>(
+      '/auth/change-password',
       dto,
     );
     return data;

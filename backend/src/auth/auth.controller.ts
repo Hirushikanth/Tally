@@ -1,15 +1,29 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Put,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import {
+  ChangePasswordDto,
   ForgotPasswordDto,
   LoginDto,
   LogoutDto,
   RefreshDto,
   RegisterDto,
   ResetPasswordDto,
+  UpdateSecurityQuestionsDto,
   VerifyAnswersDto,
 } from './auth.dto';
+import { JwtAuthGuard } from './jwt-auth.guard';
+import { AuthenticatedUser } from './jwt.strategy';
 
 const AUTH_THROTTLE = { auth: { limit: 5, ttl: 60_000 } };
 
@@ -49,6 +63,34 @@ export class AuthController {
   @Throttle(AUTH_THROTTLE)
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto);
+  }
+
+  @Get('security-questions')
+  @UseGuards(JwtAuthGuard)
+  getSecurityQuestions(@Request() req: { user: AuthenticatedUser }) {
+    return this.authService.getSecurityQuestions(req.user.userId);
+  }
+
+  @Put('security-questions')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @Throttle(AUTH_THROTTLE)
+  updateSecurityQuestions(
+    @Request() req: { user: AuthenticatedUser },
+    @Body() dto: UpdateSecurityQuestionsDto,
+  ) {
+    return this.authService.updateSecurityQuestions(req.user.userId, dto);
+  }
+
+  @Post('change-password')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @Throttle(AUTH_THROTTLE)
+  changePassword(
+    @Request() req: { user: AuthenticatedUser },
+    @Body() dto: ChangePasswordDto,
+  ) {
+    return this.authService.changePassword(req.user.userId, dto);
   }
 
   @Post('refresh')

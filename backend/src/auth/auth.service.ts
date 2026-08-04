@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   UnauthorizedException,
   ConflictException,
@@ -12,8 +13,10 @@ import { PrismaService } from '../common/prisma/prisma.service';
 import {
   ForgotPasswordDto,
   LoginDto,
+  ChangePasswordDto,
   RegisterDto,
   ResetPasswordDto,
+  UpdateSecurityQuestionsDto,
   VerifyAnswersDto,
 } from './auth.dto';
 
@@ -237,6 +240,92 @@ export class AuthService {
       where: { tokenHash: hashToken(refreshToken), revokedAt: null },
       data: { revokedAt: new Date() },
     });
+    return { success: true };
+  }
+
+  async getSecurityQuestions(
+    userId: string,
+  ): Promise<{ id: string; question: string }[]> {
+    return this.prisma.securityQuestion.findMany({
+      where: { userId },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      select: { id: true, question: true },
+    });
+  }
+
+  async changePassword(
+    userId: string,
+    dto: ChangePasswordDto,
+  ): Promise<AuthResponse> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const valid = await bcrypt.compare(dto.currentPassword, user.passwordHash);
+    if (!valid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    const passwordHash = await bcrypt.hash(dto.newPassword, BCRYPT_ROUNDS);
+    const { token, tokenHash } = generateRefreshTokenPair();
+    await this.prisma.$transaction([
+      // Revoke every session, then issue a fresh one for this device.
+      this.prisma.refreshToken.updateMany({
+        where: { userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+      this.prisma.refreshToken.create({
+        data: {
+          userId,
+          tokenHash,
+          expiresAt: this.refreshExpiry(),
+        },
+      }),
+      this.prisma.user.update({
+        where: { id: userId },
+        data: { passwordHash },
+      }),
+    ]);
+    return this.buildAuthResponse(user, token);
+  }
+
+  async updateSecurityQuestions(
+    userId: string,
+    dto: UpdateSecurityQuestionsDto,
+  ): Promise<{ success: true }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const valid = await bcrypt.compare(dto.currentPassword, user.passwordHash);
+    if (!valid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    const questions = dto.securityQuestions.map((q) => q.question);
+    if (new Set(questions).size !== questions.length) {
+      throw new BadRequestException('Security questions must be unique');
+    }
+
+    const replacements = await Promise.all(
+      dto.securityQuestions.map(async (q) => ({
+        question: q.question,
+        answerHash: await bcrypt.hash(normalizeAnswer(q.answer), BCRYPT_ROUNDS),
+      })),
+    );
+
+    await this.prisma.$transaction([
+      this.prisma.securityQuestion.deleteMany({ where: { userId } }),
+      this.prisma.securityQuestion.createMany({
+        data: replacements.map((q) => ({ ...q, userId })),
+      }),
+    ]);
     return { success: true };
   }
 

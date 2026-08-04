@@ -1,0 +1,77 @@
+.settings-page {
+  padding: 32px 40px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.settings-header {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.settings-title {
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.settings-sub {
+  font-size: 13.5px;
+  color: var(--text-mid);
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+.settings-card {
+  padding: 26px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.settings-card-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.settings-card-sub {
+  font-size: 13px;
+  color: var(--text-mid);
+  line-height: 1.5;
+}
+
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.settings-current-questions {
+  font-size: 13px;
+  color: var(--text-mid);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+}
+
+.settings-current-label {
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-low);
+  margin-bottom: 6px;
+}
+
+.settings-current-questions ul {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
