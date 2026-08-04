@@ -9,9 +9,35 @@ import { PrismaService } from '../src/common/prisma/prisma.service';
  * E2E integration tests for Phase 3: Auth, Trips, Members, Role enforcement.
  * Runs against the real tally_test PostgreSQL database.
  */
+
+const SECURITY_QUESTIONS = [
+  { question: 'What was the name of your first pet?', answer: 'Fluffy' },
+  { question: 'In which city were you born?', answer: 'Kandy' },
+];
+
+function registerUser(
+  server: import('supertest').SuperTest<import('supertest').Test>,
+  name: string,
+  email: string,
+  password = 'password123',
+) {
+  return server
+    .post('/auth/register')
+    .send({ name, email, password, securityQuestions: SECURITY_QUESTIONS });
+}
+
+function loginUser(
+  server: import('supertest').SuperTest<import('supertest').Test>,
+  email: string,
+  password = 'password123',
+) {
+  return server.post('/auth/login').send({ email, password });
+}
+
 describe('Phase 3 — Auth, Trips & Members E2E', () => {
   let app: INestApplication;
   let prisma: PrismaService;
+  let server: import('supertest').SuperTest<import('supertest').Test>;
 
   const getTestDbUrl = () =>
     process.env.DATABASE_URL ||
@@ -30,6 +56,7 @@ describe('Phase 3 — Auth, Trips & Members E2E', () => {
       new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
     );
     await app.init();
+    server = supertest(app.getHttpServer());
 
     prisma = moduleFixture.get<PrismaService>(PrismaService);
   });
@@ -40,39 +67,37 @@ describe('Phase 3 — Auth, Trips & Members E2E', () => {
 
   beforeEach(async () => {
     await prisma.$executeRawUnsafe(
-      `TRUNCATE TABLE "Posting", "Attachment", "BusinessEvent", "BalanceSnapshot", "Member", "Trip", "User", "RefreshToken" CASCADE;`,
+      `TRUNCATE TABLE "Posting", "Attachment", "BusinessEvent", "BalanceSnapshot", "Member", "Trip", "User", "RefreshToken", "SecurityQuestion", "PasswordResetToken" CASCADE;`,
     );
   });
 
   // ─── Auth ──────────────────────────────────────────────────────────────────
 
   describe('POST /auth/register', () => {
-    it('registers a new user and returns a JWT', async () => {
-      const res = await supertest(app.getHttpServer())
-        .post('/auth/register')
-        .send({ name: 'Alice', email: 'alice@example.com', password: 'password123' })
-        .expect(201);
+    it('creates an account WITHOUT a session — user signs in afterwards', async () => {
+      const res = await registerUser(
+        server,
+        'Alice',
+        'alice@example.com',
+      ).expect(201);
 
-      expect(res.body.accessToken).toBeDefined();
       expect(res.body.user.email).toBe('alice@example.com');
+      expect(res.body.accessToken).toBeUndefined();
+      expect(res.body.refreshToken).toBeUndefined();
+
+      const login = await loginUser(server, 'alice@example.com').expect(200);
+      expect(login.body.accessToken).toBeDefined();
     });
 
     it('returns 409 if email is already taken', async () => {
-      await supertest(app.getHttpServer())
-        .post('/auth/register')
-        .send({ name: 'Alice', email: 'alice@example.com', password: 'password123' });
+      await registerUser(server, 'Alice', 'alice@example.com');
 
-      await supertest(app.getHttpServer())
-        .post('/auth/register')
-        .send({ name: 'Alice2', email: 'alice@example.com', password: 'password123' })
-        .expect(409);
+      await registerUser(server, 'Alice2', 'alice@example.com').expect(409);
     });
 
     it('returns 409 (not 500) when two concurrent registrations race on the same email', async () => {
       const attempt = () =>
-        supertest(app.getHttpServer())
-          .post('/auth/register')
-          .send({ name: 'Racer', email: 'racer@example.com', password: 'password123' });
+        registerUser(server, 'Racer', 'racer@example.com');
 
       const [a, b] = await Promise.all([attempt(), attempt()]);
       const statuses = [a.status, b.status].sort();
@@ -82,72 +107,264 @@ describe('Phase 3 — Auth, Trips & Members E2E', () => {
     });
 
     it('returns 400 for invalid email format', async () => {
-      await supertest(app.getHttpServer())
-        .post('/auth/register')
-        .send({ name: 'Alice', email: 'not-an-email', password: 'password123' })
-        .expect(400);
+      await registerUser(server, 'Alice', 'not-an-email').expect(400);
     });
 
     it('returns 400 for a short password', async () => {
+      await registerUser(server, 'Alice', 'alice@example.com', 'short').expect(
+        400,
+      );
+    });
+
+    it('returns 400 for a password without a letter or number', async () => {
+      await registerUser(
+        server,
+        'Alice',
+        'alice@example.com',
+        'lettersonly',
+      ).expect(400);
+      await registerUser(server, 'Alice', 'alice@example.com', '12345678').expect(
+        400,
+      );
+    });
+
+    it('returns 400 when security questions are missing or invalid', async () => {
       await supertest(app.getHttpServer())
         .post('/auth/register')
-        .send({ name: 'Alice', email: 'alice@example.com', password: 'short' })
+        .send({
+          name: 'NoQuestions',
+          email: 'noquestions@example.com',
+          password: 'password123',
+        })
+        .expect(400);
+
+      await supertest(app.getHttpServer())
+        .post('/auth/register')
+        .send({
+          name: 'BadQuestions',
+          email: 'badquestions@example.com',
+          password: 'password123',
+          securityQuestions: [
+            { question: 'Only one question?', answer: 'Yes' },
+          ],
+        })
+        .expect(400);
+
+      await supertest(app.getHttpServer())
+        .post('/auth/register')
+        .send({
+          name: 'ShortAnswer',
+          email: 'shortanswer@example.com',
+          password: 'password123',
+          securityQuestions: [
+            { question: 'Q1', answer: 'x' },
+            { question: 'Q2', answer: 'y' },
+          ],
+        })
         .expect(400);
     });
 
     it('normalizes email to trimmed lowercase before storing', async () => {
       const res = await supertest(app.getHttpServer())
         .post('/auth/register')
-        .send({ name: 'Alice', email: '  Alice@Example.COM ', password: 'password123' })
+        .send({
+          name: 'Alice',
+          email: '  Alice@Example.COM ',
+          password: 'password123',
+          securityQuestions: SECURITY_QUESTIONS,
+        })
         .expect(201);
 
       expect(res.body.user.email).toBe('alice@example.com');
 
       // Login with the normalized email also succeeds
-      const login = await supertest(app.getHttpServer())
-        .post('/auth/login')
-        .send({ email: 'ALICE@example.com', password: 'password123' })
-        .expect(200);
+      const login = await loginUser(server, 'ALICE@example.com').expect(200);
       expect(login.body.user.email).toBe('alice@example.com');
-    });
-
-    it('returns refreshToken alongside accessToken', async () => {
-      const res = await supertest(app.getHttpServer())
-        .post('/auth/register')
-        .send({ name: 'Carol', email: 'carol@example.com', password: 'password123' })
-        .expect(201);
-
-      expect(res.body.refreshToken).toBeDefined();
     });
   });
 
   describe('POST /auth/login', () => {
     beforeEach(async () => {
-      await supertest(app.getHttpServer())
-        .post('/auth/register')
-        .send({ name: 'Alice', email: 'alice@example.com', password: 'password123' });
+      await registerUser(server, 'Alice', 'alice@example.com');
     });
 
     it('returns a JWT for valid credentials', async () => {
-      const res = await supertest(app.getHttpServer())
-        .post('/auth/login')
-        .send({ email: 'alice@example.com', password: 'password123' })
-        .expect(200);
+      const res = await loginUser(server, 'alice@example.com').expect(200);
 
       expect(res.body.accessToken).toBeDefined();
+      expect(res.body.refreshToken).toBeDefined();
+      expect(res.body.user.email).toBe('alice@example.com');
     });
 
     it('returns 401 for wrong password', async () => {
-      await supertest(app.getHttpServer())
-        .post('/auth/login')
-        .send({ email: 'alice@example.com', password: 'wrongpassword' })
-        .expect(401);
+      await loginUser(server, 'alice@example.com', 'wrongpassword').expect(401);
     });
 
     it('returns 401 for unknown email', async () => {
+      await loginUser(server, 'ghost@example.com').expect(401);
+    });
+  });
+
+  // ─── Forgot password (security questions) ──────────────────────────────────
+
+  describe('POST /auth/forgot-password', () => {
+    it('returns the security questions for an existing account', async () => {
+      await registerUser(server, 'Alice', 'alice@example.com');
+
+      const res = await supertest(app.getHttpServer())
+        .post('/auth/forgot-password')
+        .send({ email: 'alice@example.com' })
+        .expect(200);
+
+      expect(res.body.found).toBe(true);
+      expect(res.body.questions).toHaveLength(2);
+      expect(res.body.questions[0].question).toBe(
+        'What was the name of your first pet?',
+      );
+      expect(res.body.questions[0].id).toBeDefined();
+      // Never leak answer hashes
+      expect(res.body.questions[0].answerHash).toBeUndefined();
+    });
+
+    it('returns found:false for an unknown email', async () => {
+      const res = await supertest(app.getHttpServer())
+        .post('/auth/forgot-password')
+        .send({ email: 'ghost@example.com' })
+        .expect(200);
+
+      expect(res.body.found).toBe(false);
+      expect(res.body.questions).toEqual([]);
+    });
+  });
+
+  describe('POST /auth/verify-answers', () => {
+    async function lookupQuestions(email: string) {
+      const res = await supertest(app.getHttpServer())
+        .post('/auth/forgot-password')
+        .send({ email })
+        .expect(200);
+      return res.body.questions as { id: string; question: string }[];
+    }
+
+    it('returns a one-time reset token for correct answers', async () => {
+      await registerUser(server, 'Alice', 'alice@example.com');
+      const questions = await lookupQuestions('alice@example.com');
+
+      const res = await supertest(app.getHttpServer())
+        .post('/auth/verify-answers')
+        .send({
+          email: 'alice@example.com',
+          answers: questions.map((q) => ({
+            questionId: q.id,
+            answer: SECURITY_QUESTIONS.find((sq) => sq.question === q.question)
+              ?.answer,
+          })),
+        })
+        .expect(200);
+
+      expect(res.body.resetToken).toBeDefined();
+    });
+
+    it('returns 401 for incorrect answers', async () => {
+      await registerUser(server, 'Alice', 'alice@example.com');
+      const questions = await lookupQuestions('alice@example.com');
+
       await supertest(app.getHttpServer())
-        .post('/auth/login')
-        .send({ email: 'ghost@example.com', password: 'password123' })
+        .post('/auth/verify-answers')
+        .send({
+          email: 'alice@example.com',
+          answers: questions.map((q) => ({
+            questionId: q.id,
+            answer: 'totally-wrong',
+          })),
+        })
+        .expect(401);
+    });
+
+    it('returns 401 for answers on a different account', async () => {
+      await registerUser(server, 'Alice', 'alice@example.com');
+      const questions = await lookupQuestions('alice@example.com');
+
+      // Replay Alice's question ids from Bob's account
+      await registerUser(server, 'Bob', 'bob@example.com');
+      await supertest(app.getHttpServer())
+        .post('/auth/verify-answers')
+        .send({
+          email: 'bob@example.com',
+          answers: questions.map((q) => ({
+            questionId: q.id,
+            answer: 'Fluffy',
+          })),
+        })
+        .expect(401);
+    });
+  });
+
+  describe('POST /auth/reset-password', () => {
+    async function getResetToken(email: string) {
+      const lookup = await supertest(app.getHttpServer())
+        .post('/auth/forgot-password')
+        .send({ email })
+        .expect(200);
+      const res = await supertest(app.getHttpServer())
+        .post('/auth/verify-answers')
+        .send({
+          email,
+          answers: (lookup.body.questions as {
+            id: string;
+            question: string;
+          }[]).map((q) => ({
+            questionId: q.id,
+            answer:
+              SECURITY_QUESTIONS.find((sq) => sq.question === q.question)
+                ?.answer ?? '',
+          })),
+        })
+        .expect(200);
+      return res.body.resetToken as string;
+    }
+
+    it('resets the password and revokes existing sessions', async () => {
+      await registerUser(server, 'Alice', 'alice@example.com');
+      const login = await loginUser(server, 'alice@example.com').expect(200);
+      const oldRefreshToken = login.body.refreshToken as string;
+
+      const token = await getResetToken('alice@example.com');
+      const res = await supertest(app.getHttpServer())
+        .post('/auth/reset-password')
+        .send({ token, password: 'newpassword456' })
+        .expect(200);
+      expect(res.body.success).toBe(true);
+
+      // Old password no longer works, new one does
+      await loginUser(server, 'alice@example.com', 'password123').expect(401);
+      await loginUser(server, 'alice@example.com', 'newpassword456').expect(200);
+
+      // Old session was revoked
+      await supertest(app.getHttpServer())
+        .post('/auth/refresh')
+        .send({ refreshToken: oldRefreshToken })
+        .expect(401);
+    });
+
+    it('rejects a used reset token', async () => {
+      await registerUser(server, 'Alice', 'alice@example.com');
+      const token = await getResetToken('alice@example.com');
+
+      await supertest(app.getHttpServer())
+        .post('/auth/reset-password')
+        .send({ token, password: 'newpassword456' })
+        .expect(200);
+      await supertest(app.getHttpServer())
+        .post('/auth/reset-password')
+        .send({ token, password: 'anotherpass123' })
+        .expect(401);
+    });
+
+    it('rejects a bogus reset token', async () => {
+      await supertest(app.getHttpServer())
+        .post('/auth/reset-password')
+        .send({ token: 'bogus-token', password: 'newpassword456' })
         .expect(401);
     });
   });
@@ -156,10 +373,9 @@ describe('Phase 3 — Auth, Trips & Members E2E', () => {
 
   describe('POST /auth/refresh', () => {
     it('rotates the refresh token and issues a fresh access token', async () => {
-      const reg = await supertest(app.getHttpServer())
-        .post('/auth/register')
-        .send({ name: 'Dana', email: 'dana@example.com', password: 'password123' });
-      const firstRefresh = reg.body.refreshToken as string;
+      await registerUser(server, 'Dana', 'dana@example.com');
+      const login = await loginUser(server, 'dana@example.com').expect(200);
+      const firstRefresh = login.body.refreshToken as string;
 
       const res = await supertest(app.getHttpServer())
         .post('/auth/refresh')
@@ -173,10 +389,9 @@ describe('Phase 3 — Auth, Trips & Members E2E', () => {
     });
 
     it('rejects a rotated (reused) refresh token', async () => {
-      const reg = await supertest(app.getHttpServer())
-        .post('/auth/register')
-        .send({ name: 'Eve', email: 'eve@example.com', password: 'password123' });
-      const firstRefresh = reg.body.refreshToken as string;
+      await registerUser(server, 'Eve', 'eve@example.com');
+      const login = await loginUser(server, 'eve@example.com').expect(200);
+      const firstRefresh = login.body.refreshToken as string;
 
       await supertest(app.getHttpServer())
         .post('/auth/refresh')
@@ -200,10 +415,9 @@ describe('Phase 3 — Auth, Trips & Members E2E', () => {
 
   describe('POST /auth/logout', () => {
     it('revokes the refresh token so it can no longer be used', async () => {
-      const reg = await supertest(app.getHttpServer())
-        .post('/auth/register')
-        .send({ name: 'Frank', email: 'frank@example.com', password: 'password123' });
-      const refreshToken = reg.body.refreshToken as string;
+      await registerUser(server, 'Frank', 'frank@example.com');
+      const login = await loginUser(server, 'frank@example.com').expect(200);
+      const refreshToken = login.body.refreshToken as string;
 
       await supertest(app.getHttpServer())
         .post('/auth/logout')
@@ -217,10 +431,9 @@ describe('Phase 3 — Auth, Trips & Members E2E', () => {
     });
 
     it('is idempotent — logging out twice still succeeds', async () => {
-      const reg = await supertest(app.getHttpServer())
-        .post('/auth/register')
-        .send({ name: 'Grace', email: 'grace@example.com', password: 'password123' });
-      const refreshToken = reg.body.refreshToken as string;
+      await registerUser(server, 'Grace', 'grace@example.com');
+      const login = await loginUser(server, 'grace@example.com').expect(200);
+      const refreshToken = login.body.refreshToken as string;
 
       await supertest(app.getHttpServer())
         .post('/auth/logout')
@@ -240,15 +453,12 @@ describe('Phase 3 — Auth, Trips & Members E2E', () => {
     let bobToken: string;
 
     beforeEach(async () => {
-      const aliceRes = await supertest(app.getHttpServer())
-        .post('/auth/register')
-        .send({ name: 'Alice', email: 'alice@example.com', password: 'password123' });
-      aliceToken = aliceRes.body.accessToken as string;
-
-      const bobRes = await supertest(app.getHttpServer())
-        .post('/auth/register')
-        .send({ name: 'Bob', email: 'bob@example.com', password: 'password123' });
-      bobToken = bobRes.body.accessToken as string;
+      await registerUser(server, 'Alice', 'alice@example.com');
+      await registerUser(server, 'Bob', 'bob@example.com');
+      const aliceLogin = await loginUser(server, 'alice@example.com').expect(200);
+      const bobLogin = await loginUser(server, 'bob@example.com').expect(200);
+      aliceToken = aliceLogin.body.accessToken as string;
+      bobToken = bobLogin.body.accessToken as string;
     });
 
     it('POST /trips — creates a trip and assigns creator as OWNER', async () => {
@@ -350,24 +560,16 @@ describe('Phase 3 — Auth, Trips & Members E2E', () => {
     let tripId: string;
 
     beforeEach(async () => {
-      const aliceRes = await supertest(app.getHttpServer())
-        .post('/auth/register')
-        .send({ name: 'Alice', email: 'alice@example.com', password: 'password123' });
-      aliceToken = aliceRes.body.accessToken as string;
+      await registerUser(server, 'Alice', 'alice@example.com');
+      await registerUser(server, 'Bob', 'bob@example.com');
+      await registerUser(server, 'Viewer', 'viewer@example.com');
 
-      const bobRes = await supertest(app.getHttpServer())
-        .post('/auth/register')
-        .send({ name: 'Bob', email: 'bob@example.com', password: 'password123' });
-      bobToken = bobRes.body.accessToken as string;
-
-      await supertest(app.getHttpServer())
-        .post('/auth/register')
-        .send({ name: 'Viewer', email: 'viewer@example.com', password: 'password123' });
-      // viewer's token — we'll get it via login
-      const viewerRes = await supertest(app.getHttpServer())
-        .post('/auth/login')
-        .send({ email: 'viewer@example.com', password: 'password123' });
-      viewerToken = viewerRes.body.accessToken as string;
+      const aliceLogin = await loginUser(server, 'alice@example.com').expect(200);
+      const bobLogin = await loginUser(server, 'bob@example.com').expect(200);
+      const viewerLogin = await loginUser(server, 'viewer@example.com').expect(200);
+      aliceToken = aliceLogin.body.accessToken as string;
+      bobToken = bobLogin.body.accessToken as string;
+      viewerToken = viewerLogin.body.accessToken as string;
 
       const createRes = await supertest(app.getHttpServer())
         .post('/trips')

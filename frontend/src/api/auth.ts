@@ -1,14 +1,58 @@
 import { apiClient } from './client';
-import type { AuthResponse, LoginDto, RegisterDto } from './types';
+import type {
+  AuthResponse,
+  ForgotPasswordDto,
+  ForgotPasswordResponse,
+  LoginDto,
+  RegisterDto,
+  RegisterResponse,
+  ResetPasswordDto,
+  ResetPasswordResponse,
+  VerifyAnswersDto,
+  VerifyAnswersResponse,
+} from './types';
 
 export const authApi = {
-  register: async (dto: RegisterDto): Promise<AuthResponse> => {
-    const { data } = await apiClient.post<AuthResponse>('/auth/register', dto);
+  register: async (dto: RegisterDto): Promise<RegisterResponse> => {
+    const { data } = await apiClient.post<RegisterResponse>(
+      '/auth/register',
+      dto,
+    );
     return data;
   },
 
   login: async (dto: LoginDto): Promise<AuthResponse> => {
     const { data } = await apiClient.post<AuthResponse>('/auth/login', dto);
+    return data;
+  },
+
+  forgotPassword: async (
+    dto: ForgotPasswordDto,
+  ): Promise<ForgotPasswordResponse> => {
+    const { data } = await apiClient.post<ForgotPasswordResponse>(
+      '/auth/forgot-password',
+      dto,
+    );
+    return data;
+  },
+
+  verifyAnswers: async (
+    dto: VerifyAnswersDto,
+  ): Promise<VerifyAnswersResponse> => {
+    const { data } = await apiClient.post<VerifyAnswersResponse>(
+      '/auth/verify-answers',
+      dto,
+    );
+    return data;
+  },
+
+  resetPassword: async (
+    dto: ResetPasswordDto,
+  ): Promise<ResetPasswordResponse> => {
+    const { data } = await apiClient.post<ResetPasswordResponse>(
+      '/auth/reset-password',
+      dto,
+    );
     return data;
   },
 

@@ -1,18 +1,19 @@
 import { useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { authApi } from '@/api/auth';
 import { useAuthStore } from '@/store/auth.store';
 import { Button } from '@/components/common/Button';
+import { PasswordInput } from '@/components/common/PasswordInput';
 import { Stars } from '@/components/Stars';
 import { getApiErrorMessage } from '@/api/errors';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import './AuthPages.css';
 
 const loginSchema = z.object({
-  email: z.string().email('Enter a valid email'),
+  email: z.string().trim().email('Enter a valid email'),
   password: z.string().min(1, 'Password is required'),
 });
 
@@ -23,7 +24,10 @@ export function LoginPage() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const login = useAuthStore((s) => s.login);
   const navigate = useNavigate();
+  const location = useLocation();
   const [serverError, setServerError] = useState('');
+  const justRegistered = (location.state as { registered?: boolean } | null)
+    ?.registered;
 
   const {
     register,
@@ -64,6 +68,12 @@ export function LoginPage() {
             <p className="auth-subtitle">Sign in to your account to continue</p>
           </div>
 
+          {justRegistered && (
+            <div className="auth-success" role="status">
+              Account created — sign in to continue.
+            </div>
+          )}
+
           <form className="auth-form" onSubmit={handleSubmit(onSubmit)} noValidate>
             <div className="form-group">
               <label className="form-label" htmlFor="login-email">
@@ -86,10 +96,9 @@ export function LoginPage() {
               <label className="form-label" htmlFor="login-password">
                 Password
               </label>
-              <input
+              <PasswordInput
                 id="login-password"
-                type="password"
-                className={`form-input ${errors.password ? 'error' : ''}`}
+                className={errors.password ? 'error' : ''}
                 placeholder="••••••••"
                 autoComplete="current-password"
                 {...register('password')}
@@ -97,6 +106,12 @@ export function LoginPage() {
               {errors.password && (
                 <span className="form-error">{errors.password.message}</span>
               )}
+            </div>
+
+            <div className="auth-form-links">
+              <Link to="/forgot-password" className="auth-link">
+                Forgot password?
+              </Link>
             </div>
 
             {serverError && (

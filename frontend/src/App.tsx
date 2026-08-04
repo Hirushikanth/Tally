@@ -9,6 +9,11 @@ const LoginPage = lazy(() =>
 const RegisterPage = lazy(() =>
   import('@/pages/auth/RegisterPage').then((m) => ({ default: m.RegisterPage })),
 );
+const ForgotPasswordPage = lazy(() =>
+  import('@/pages/auth/ForgotPasswordPage').then((m) => ({
+    default: m.ForgotPasswordPage,
+  })),
+);
 const TripsListPage = lazy(() =>
   import('@/pages/trips/TripsListPage').then((m) => ({ default: m.TripsListPage })),
 );
@@ -50,6 +55,7 @@ export function App() {
         {/* Auth routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
         {/* Protected routes inside AppShell */}
         <Route element={<AppShell />}>

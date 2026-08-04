@@ -9,7 +9,13 @@ import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'node:crypto';
 import ms from 'ms';
 import { PrismaService } from '../common/prisma/prisma.service';
-import { LoginDto, RegisterDto } from './auth.dto';
+import {
+  ForgotPasswordDto,
+  LoginDto,
+  RegisterDto,
+  ResetPasswordDto,
+  VerifyAnswersDto,
+} from './auth.dto';
 
 export interface AuthResponse {
   accessToken: string;
@@ -21,7 +27,21 @@ export interface AuthResponse {
   };
 }
 
+export interface RegisterResponse {
+  user: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
+export interface ForgotPasswordResponse {
+  found: boolean;
+  questions: { id: string; question: string }[];
+}
+
 const BCRYPT_ROUNDS = 12;
+const RESET_TOKEN_TTL_MS = 15 * 60 * 1000;
 
 @Injectable()
 export class AuthService {
@@ -31,7 +51,7 @@ export class AuthService {
     private readonly config: ConfigService,
   ) {}
 
-  async register(dto: RegisterDto): Promise<AuthResponse> {
+  async register(dto: RegisterDto): Promise<RegisterResponse> {
     const email = normalizeEmail(dto.email);
     const existing = await this.prisma.user.findUnique({
       where: { email },
@@ -41,6 +61,13 @@ export class AuthService {
     }
 
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
+    const securityQuestions = await Promise.all(
+      dto.securityQuestions.map(async (q) => ({
+        question: q.question,
+        answerHash: await bcrypt.hash(normalizeAnswer(q.answer), BCRYPT_ROUNDS),
+      })),
+    );
+
     // Concurrent duplicate registrations surface as P2002 → 409 via the
     // global exception filter (all-exceptions.filter.ts).
     const user = await this.prisma.user.create({
@@ -48,10 +75,12 @@ export class AuthService {
         name: dto.name,
         email,
         passwordHash,
+        securityQuestions: { create: securityQuestions },
       },
     });
 
-    return this.buildAuthResponse(user);
+    // Registration only creates the account — it does not log the user in.
+    return { user: { id: user.id, name: user.name, email: user.email } };
   }
 
   async login(dto: LoginDto): Promise<AuthResponse> {
@@ -68,6 +97,99 @@ export class AuthService {
     }
 
     return this.buildAuthResponse(user);
+  }
+
+  async forgotPassword(
+    dto: ForgotPasswordDto,
+  ): Promise<ForgotPasswordResponse> {
+    const user = await this.prisma.user.findUnique({
+      where: { email: normalizeEmail(dto.email) },
+    });
+    if (!user) {
+      return { found: false, questions: [] };
+    }
+    const questions = await this.prisma.securityQuestion.findMany({
+      where: { userId: user.id },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      select: { id: true, question: true },
+    });
+    return { found: true, questions };
+  }
+
+  async verifyAnswers(dto: VerifyAnswersDto): Promise<{ resetToken: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { email: normalizeEmail(dto.email) },
+    });
+    if (!user) {
+      throw new UnauthorizedException('Invalid email or security answers');
+    }
+
+    for (const submitted of dto.answers) {
+      const stored = await this.prisma.securityQuestion.findUnique({
+        where: { id: submitted.questionId },
+      });
+      if (!stored || stored.userId !== user.id) {
+        throw new UnauthorizedException('Invalid email or security answers');
+      }
+      const valid = await bcrypt.compare(
+        normalizeAnswer(submitted.answer),
+        stored.answerHash,
+      );
+      if (!valid) {
+        throw new UnauthorizedException('Invalid email or security answers');
+      }
+    }
+
+    // One-time token; any previously issued (unused) tokens are invalidated.
+    const { token, tokenHash } = generateResetTokenPair();
+    await this.prisma.$transaction([
+      this.prisma.passwordResetToken.updateMany({
+        where: { userId: user.id, usedAt: null },
+        data: { usedAt: new Date() },
+      }),
+      this.prisma.passwordResetToken.create({
+        data: {
+          userId: user.id,
+          tokenHash,
+          expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS),
+        },
+      }),
+    ]);
+    return { resetToken: token };
+  }
+
+  async resetPassword(dto: ResetPasswordDto): Promise<{ success: true }> {
+    const stored = await this.prisma.passwordResetToken.findUnique({
+      where: { tokenHash: hashToken(dto.token) },
+    });
+    if (!stored || stored.usedAt || stored.expiresAt < new Date()) {
+      throw new UnauthorizedException('Invalid or expired reset token');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: stored.userId },
+    });
+    if (!user) {
+      throw new UnauthorizedException('Invalid or expired reset token');
+    }
+
+    const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
+    await this.prisma.$transaction([
+      this.prisma.passwordResetToken.update({
+        where: { id: stored.id },
+        data: { usedAt: new Date() },
+      }),
+      this.prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash },
+      }),
+      // Force re-authentication everywhere: revoke all active sessions.
+      this.prisma.refreshToken.updateMany({
+        where: { userId: user.id, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+    ]);
+    return { success: true };
   }
 
   async refresh(refreshToken: string): Promise<AuthResponse> {
@@ -157,6 +279,10 @@ export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
+export function normalizeAnswer(answer: string): string {
+  return answer.trim().toLowerCase();
+}
+
 export function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
@@ -166,5 +292,13 @@ export function generateRefreshTokenPair(): {
   tokenHash: string;
 } {
   const token = randomBytes(48).toString('base64url');
+  return { token, tokenHash: hashToken(token) };
+}
+
+export function generateResetTokenPair(): {
+  token: string;
+  tokenHash: string;
+} {
+  const token = randomBytes(32).toString('base64url');
   return { token, tokenHash: hashToken(token) };
 }

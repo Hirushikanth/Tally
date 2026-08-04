@@ -56,11 +56,23 @@ describe('Phase 9 — Full Journey & Read Path E2E', () => {
   });
 
   const register = async (name: string, email: string) => {
-    const res = await supertest(app.getHttpServer())
+    await supertest(app.getHttpServer())
       .post('/auth/register')
-      .send({ name, email, password: 'password123' })
+      .send({
+        name,
+        email,
+        password: 'password123',
+        securityQuestions: [
+          { question: 'First pet?', answer: 'Fluffy' },
+          { question: 'Birth city?', answer: 'Kandy' },
+        ],
+      })
       .expect(201);
-    return res.body.accessToken as string;
+    const login = await supertest(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email, password: 'password123' })
+      .expect(200);
+    return login.body.accessToken as string;
   };
 
   const addMember = async (email: string, role = 'MEMBER') => {

@@ -29,6 +29,23 @@ describe('Phase 4 — Business Event APIs E2E', () => {
   let sahanMemberId: string;
   let nimalMemberId: string;
 
+  const SECURITY_QUESTIONS = [
+    { question: 'First pet?', answer: 'Fluffy' },
+    { question: 'Birth city?', answer: 'Kandy' },
+  ];
+
+  const registerAndLogin = async (name: string, email: string) => {
+    await supertest(app.getHttpServer())
+      .post('/auth/register')
+      .send({ name, email, password: 'password123', securityQuestions: SECURITY_QUESTIONS })
+      .expect(201);
+    const login = await supertest(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email, password: 'password123' })
+      .expect(200);
+    return login.body.accessToken as string;
+  };
+
   beforeAll(async () => {
     process.env.DATABASE_URL = getTestDbUrl();
 
@@ -58,39 +75,41 @@ describe('Phase 4 — Business Event APIs E2E', () => {
       `TRUNCATE TABLE "Posting", "Attachment", "BusinessEvent", "BalanceSnapshot", "Member", "Trip", "User" CASCADE;`,
     );
 
-    // Register Users
-    const hirushiRes = await supertest(app.getHttpServer())
-      .post('/auth/register')
-      .send({ name: 'Hirushi', email: 'hirushi@example.com', password: 'password123' })
-      .expect(201);
-    ownerToken = hirushiRes.body.accessToken as string;
-
-    const kasunRes = await supertest(app.getHttpServer())
-      .post('/auth/register')
-      .send({ name: 'Kasun', email: 'kasun@example.com', password: 'password123' })
-      .expect(201);
-    memberToken = kasunRes.body.accessToken as string;
+    // Register Users (+ login for tokens — registration no longer creates a session)
+    ownerToken = await registerAndLogin('Hirushi', 'hirushi@example.com');
+    memberToken = await registerAndLogin('Kasun', 'kasun@example.com');
 
     await supertest(app.getHttpServer())
       .post('/auth/register')
-      .send({ name: 'Amal', email: 'amal@example.com', password: 'password123' })
+      .send({
+        name: 'Amal',
+        email: 'amal@example.com',
+        password: 'password123',
+        securityQuestions: SECURITY_QUESTIONS,
+      })
       .expect(201);
 
     await supertest(app.getHttpServer())
       .post('/auth/register')
-      .send({ name: 'Sahan', email: 'sahan@example.com', password: 'password123' })
+      .send({
+        name: 'Sahan',
+        email: 'sahan@example.com',
+        password: 'password123',
+        securityQuestions: SECURITY_QUESTIONS,
+      })
       .expect(201);
 
     await supertest(app.getHttpServer())
       .post('/auth/register')
-      .send({ name: 'Nimal', email: 'nimal@example.com', password: 'password123' })
+      .send({
+        name: 'Nimal',
+        email: 'nimal@example.com',
+        password: 'password123',
+        securityQuestions: SECURITY_QUESTIONS,
+      })
       .expect(201);
 
-    const viewerRes = await supertest(app.getHttpServer())
-      .post('/auth/register')
-      .send({ name: 'ViewerUser', email: 'viewer@example.com', password: 'password123' })
-      .expect(201);
-    viewerToken = viewerRes.body.accessToken as string;
+    viewerToken = await registerAndLogin('ViewerUser', 'viewer@example.com');
 
     // Create Trip (Hirushi is OWNER)
     const tripRes = await supertest(app.getHttpServer())

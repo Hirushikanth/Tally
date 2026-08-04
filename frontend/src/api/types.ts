@@ -17,15 +17,63 @@ export interface AuthResponse {
   };
 }
 
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+}
+
+export interface RegisterResponse {
+  user: AuthUser;
+}
+
+export interface SecurityQuestionDto {
+  question: string;
+  answer: string;
+}
+
 export interface RegisterDto {
   name: string;
   email: string;
   password: string;
+  securityQuestions: SecurityQuestionDto[];
 }
 
 export interface LoginDto {
   email: string;
   password: string;
+}
+
+export interface ForgotPasswordDto {
+  email: string;
+}
+
+export interface SecurityQuestion {
+  id: string;
+  question: string;
+}
+
+export interface ForgotPasswordResponse {
+  found: boolean;
+  questions: SecurityQuestion[];
+}
+
+export interface VerifyAnswersDto {
+  email: string;
+  answers: { questionId: string; answer: string }[];
+}
+
+export interface VerifyAnswersResponse {
+  resetToken: string;
+}
+
+export interface ResetPasswordDto {
+  token: string;
+  password: string;
+}
+
+export interface ResetPasswordResponse {
+  success: boolean;
 }
 
 // --- Trips ---

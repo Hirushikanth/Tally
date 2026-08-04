@@ -15,6 +15,9 @@ vi.mock('@/api/auth', () => ({
     register: vi.fn(),
     refresh: vi.fn(),
     logout: vi.fn(),
+    forgotPassword: vi.fn(),
+    verifyAnswers: vi.fn(),
+    resetPassword: vi.fn(),
   },
 }));
 
@@ -25,10 +28,10 @@ beforeEach(() => {
   useAuthStore.setState({ user: null, token: null, refreshToken: null, isAuthenticated: false });
 });
 
-function renderLoginPage() {
+function renderLoginPage(initialEntries: (string | { pathname: string; state?: unknown })[] = ['/login']) {
   return render(
     <QueryClientProvider client={createTestQueryClient()}>
-      <MemoryRouter initialEntries={['/login']}>
+      <MemoryRouter initialEntries={initialEntries}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/trips" element={<div>Trips marker</div>} />
@@ -44,6 +47,9 @@ describe('LoginPage', () => {
     expect(screen.getByLabelText('Email')).toBeInTheDocument();
     expect(screen.getByLabelText('Password')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'Forgot password?' }),
+    ).toHaveAttribute('href', '/forgot-password');
   });
 
   it('shows validation errors for empty submit', async () => {
@@ -87,6 +93,13 @@ describe('LoginPage', () => {
       await screen.findByText('Invalid email or password'),
     ).toBeInTheDocument();
     expect(useAuthStore.getState().isAuthenticated).toBe(false);
+  });
+
+  it('shows a success banner when arriving from account creation', () => {
+    renderLoginPage([{ pathname: '/login', state: { registered: true } }]);
+    expect(
+      screen.getByText('Account created — sign in to continue.'),
+    ).toBeInTheDocument();
   });
 
   it('redirects to /trips when already authenticated', () => {

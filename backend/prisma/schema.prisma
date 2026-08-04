@@ -26,10 +26,12 @@ model User {
   passwordHash String
   createdAt    DateTime @default(now())
 
-  memberships   Member[]
-  createdTrips  Trip[]          @relation("TripCreator")
-  createdEvents BusinessEvent[] @relation("EventCreator")
-  refreshTokens RefreshToken[]
+  memberships       Member[]
+  createdTrips      Trip[]               @relation("TripCreator")
+  createdEvents     BusinessEvent[]      @relation("EventCreator")
+  refreshTokens     RefreshToken[]
+  securityQuestions SecurityQuestion[]
+  passwordResets    PasswordResetToken[]
 }
 
 // ------------------------------------------------------------
@@ -39,13 +41,13 @@ model User {
 // ------------------------------------------------------------
 
 model RefreshToken {
-  id                 String    @id @default(cuid())
-  userId             String
-  tokenHash          String    @unique
-  expiresAt          DateTime
-  revokedAt          DateTime?
-  replacedByTokenId  String?   @unique
-  createdAt          DateTime  @default(now())
+  id                String    @id @default(cuid())
+  userId            String
+  tokenHash         String    @unique
+  expiresAt         DateTime
+  revokedAt         DateTime?
+  replacedByTokenId String?   @unique
+  createdAt         DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -53,6 +55,40 @@ model RefreshToken {
   @@index([expiresAt])
 }
 
+// ------------------------------------------------------------
+// Security questions — used for account recovery. Answers are
+// stored as bcrypt hashes only (never plaintext).
+// ------------------------------------------------------------
+
+model SecurityQuestion {
+  id         String   @id @default(cuid())
+  userId     String
+  question   String
+  answerHash String
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, question])
+}
+
+// ------------------------------------------------------------
+// Password reset tokens — opaque, stored as SHA-256 hashes only,
+// single-use (usedAt), short-lived (expiresAt).
+// ------------------------------------------------------------
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
 
 model Trip {
   id          String     @id @default(cuid())
